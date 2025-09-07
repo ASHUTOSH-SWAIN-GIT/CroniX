@@ -1,0 +1,7 @@
+database:
+  host: your-render-db-host  
+  port: 5432
+  user: your-db-username
+  password: your-db-password
+  name: your-db-name
+  sslmode: disable         
