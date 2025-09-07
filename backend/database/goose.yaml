@@ -1,0 +1,4 @@
+version: 1
+driver: postgres
+dir: ./migrations
+table: goose_db_version
