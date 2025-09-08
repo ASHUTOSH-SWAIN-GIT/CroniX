@@ -1,4 +1,3 @@
-import "./App.css";
 import type { ReactNode } from "react";
 
 // Monochrome inline SVG icons
@@ -99,7 +98,7 @@ const IconCode = () => (
   </svg>
 );
 
-// Feature card component for the bento grid
+// Feature card component for the bento grid (Tailwind)
 const FeatureCard = ({
   title,
   description,
@@ -111,11 +110,22 @@ const FeatureCard = ({
   icon: ReactNode;
   size?: "normal" | "large";
 }) => {
+  const sizeClasses =
+    size === "large"
+      ? "col-span-12 md:col-span-6"
+      : "col-span-12 sm:col-span-6 md:col-span-3";
+
   return (
-    <div className={`feature-card ${size}`}>
-      {icon}
-      <h3 className="feature-title">{title}</h3>
-      <p className="feature-description">{description}</p>
+    <div
+      className={`rounded-2xl border border-neutral-800 bg-neutral-900 p-8 transition-all duration-300 hover:-translate-y-1 hover:border-neutral-500 ${sizeClasses}`}
+    >
+      <div className="w-12 h-12 mb-5 text-white [&>svg]:w-12 [&>svg]:h-12">
+        {icon}
+      </div>
+      <h3 className="text-2xl font-semibold mb-4 text-white">{title}</h3>
+      <p className="text-neutral-400 leading-relaxed text-base">
+        {description}
+      </p>
     </div>
   );
 };
@@ -167,37 +177,46 @@ function App() {
   ];
 
   return (
-    <div className="app">
+    <div className="min-h-screen flex flex-col bg-black text-white">
       {/* Hero Section */}
-      <section className="hero">
-        <div className="hero-content">
-          <h1 className="tagline">
-            Cron Jobs, <span className="accent">Simplified</span>
+      <section className="flex-1 flex items-center justify-center px-8 pt-8 pb-4 min-h-[70vh] bg-black">
+        <div className="text-center max-w-3xl mx-auto">
+          <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] font-bold mb-6 tracking-tight leading-tight">
+            Cron Jobs, <span className="text-neutral-400">Simplified</span>
           </h1>
-          <p className="hero-description">
+          <p className="text-xl text-neutral-400 mb-5 max-w-2xl mx-auto leading-relaxed">
             A developer-focused dashboard that lets you schedule, manage, and
             monitor cron jobs that hit specific endpoints automatically. Secure,
             reliable, and built for the modern web.
           </p>
-          <div className="hero-actions">
-            <button className="cta-button">Get Started</button>
-            <button className="secondary-button">Learn More</button>
+          <div className="flex gap-4 justify-center flex-wrap">
+            <a
+              href="/auth"
+              className="rounded-xl border border-transparent px-6 py-4 text-sm font-semibold bg-white text-black shadow transition hover:bg-neutral-200"
+            >
+              Get Started
+            </a>
+            <button className="rounded-xl border border-neutral-800 px-6 py-4 text-sm font-medium bg-transparent text-white transition hover:bg-neutral-900">
+              Learn More
+            </button>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="features">
-        <div className="features-container">
-          <div className="section-header">
-            <h2>Everything you need to manage cron jobs</h2>
-            <p>
+      <section className="py-14 px-8 bg-black">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">
+              Everything you need to manage cron jobs
+            </h2>
+            <p className="text-lg text-neutral-400 max-w-xl mx-auto">
               Powerful features designed for developers who value simplicity and
               reliability
             </p>
           </div>
 
-          <div className="bento-grid">
+          <div className="grid grid-cols-12 gap-5">
             {features.map((feature, index) => (
               <FeatureCard
                 key={index}
@@ -212,9 +231,11 @@ function App() {
       </section>
 
       {/* Footer */}
-      <footer className="footer">
-        <div className="footer-content">
-          <p>Built with React, Go, and modern cloud infrastructure</p>
+      <footer className="bg-neutral-900 border-t border-neutral-800 p-8 mt-auto">
+        <div className="max-w-6xl mx-auto text-center">
+          <p className="text-neutral-500 text-sm">
+            Built with React, Go, and modern cloud infrastructure
+          </p>
         </div>
       </footer>
     </div>
