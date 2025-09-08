@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+-I am using Bun for this project, so don’t use npm or pnpm.
+-Don’t try to change anything in the env file; that will be done entirely by me.
+-I want the website to be dark themed — black and white color theme (majorly black).
+-Don’t run any terminal commands yourself; just give me the command and I will run it.
+- dont use emojis anywhere in the code 
