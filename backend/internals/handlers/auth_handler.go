@@ -80,9 +80,9 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	// Generate JWT token - Convert UUID to string properly
-	userIDStr := user.ID.Bytes[:]
-	jwtToken, err := h.authService.GenerateJWT(string(userIDStr), user.Email)
+	// Generate JWT token with proper UUID string
+	userIDStr := user.ID.String()
+	jwtToken, err := h.authService.GenerateJWT(userIDStr, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return

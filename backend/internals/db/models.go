@@ -8,6 +8,31 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Job struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Name      string             `json:"name"`
+	Schedule  string             `json:"schedule"`
+	Endpoint  string             `json:"endpoint"`
+	Method    string             `json:"method"`
+	Headers   []byte             `json:"headers"`
+	Body      pgtype.Text        `json:"body"`
+	Active    bool               `json:"active"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type JobLog struct {
+	ID           pgtype.UUID        `json:"id"`
+	JobID        pgtype.UUID        `json:"job_id"`
+	StartedAt    pgtype.Timestamptz `json:"started_at"`
+	FinishedAt   pgtype.Timestamptz `json:"finished_at"`
+	DurationMs   pgtype.Int4        `json:"duration_ms"`
+	Status       string             `json:"status"`
+	ResponseCode pgtype.Int4        `json:"response_code"`
+	Error        pgtype.Text        `json:"error"`
+}
+
 type User struct {
 	ID        pgtype.UUID        `json:"id"`
 	Email     string             `json:"email"`
