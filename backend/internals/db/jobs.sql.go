@@ -13,7 +13,7 @@ import (
 
 const createJob = `-- name: CreateJob :one
 INSERT INTO jobs (user_id, name, schedule, endpoint, method, headers, body, active)
-VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, true))
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id, user_id, name, schedule, endpoint, method, headers, body, active, created_at, updated_at
 `
 
@@ -25,7 +25,7 @@ type CreateJobParams struct {
 	Method   string      `json:"method"`
 	Headers  []byte      `json:"headers"`
 	Body     pgtype.Text `json:"body"`
-	Column8  interface{} `json:"column_8"`
+	Active   bool        `json:"active"`
 }
 
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
@@ -37,7 +37,7 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		arg.Method,
 		arg.Headers,
 		arg.Body,
-		arg.Column8,
+		arg.Active,
 	)
 	var i Job
 	err := row.Scan(

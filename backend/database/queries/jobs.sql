@@ -1,6 +1,6 @@
 -- name: CreateJob :one
 INSERT INTO jobs (user_id, name, schedule, endpoint, method, headers, body, active)
-VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, true))
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
 -- name: GetJob :one
