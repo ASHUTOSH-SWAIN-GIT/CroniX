@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import UserBadge from "./components/UserBadge";
+import { apiClient } from "./services/api";
 
 // Monochrome inline SVG icons
 const IconClock = () => (
@@ -136,10 +137,11 @@ function App() {
   const [isAuthed, setIsAuthed] = useState(false);
   useEffect(() => {
     let mounted = true;
-    fetch("/api/profile", { credentials: "include" })
-      .then((res) => {
+    apiClient
+      .getProfile()
+      .then(() => {
         if (!mounted) return;
-        setIsAuthed(res.ok);
+        setIsAuthed(true);
       })
       .catch(() => {
         if (!mounted) return;
