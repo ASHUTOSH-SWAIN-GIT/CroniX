@@ -261,7 +261,7 @@ export default function Jobs() {
         {/* Filters and Search */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
-            <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+            <IconSearch className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
             <input
               type="text"
               placeholder="Search jobs..."
@@ -271,7 +271,7 @@ export default function Jobs() {
             />
           </div>
           <div className="flex items-center space-x-2">
-            <IconFilter className="text-neutral-400" />
+            <IconFilter className="w-4 h-4 text-neutral-400" />
             <select
               value={statusFilter}
               onChange={(e) =>
@@ -291,7 +291,7 @@ export default function Jobs() {
         {filteredJobs.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <IconClock className="text-neutral-400" />
+              <IconClock className="w-6 h-6 text-neutral-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2">No jobs found</h3>
             <p className="text-neutral-400 mb-6">
@@ -342,11 +342,11 @@ export default function Jobs() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div className="flex items-center space-x-2 text-neutral-400">
-                        <IconGlobe />
+                        <IconGlobe className="w-4 h-4" />
                         <span className="truncate">{job.endpoint}</span>
                       </div>
                       <div className="flex items-center space-x-2 text-neutral-400">
-                        <IconClock />
+                        <IconClock className="w-4 h-4" />
                         <span>{job.schedule}</span>
                       </div>
                     </div>

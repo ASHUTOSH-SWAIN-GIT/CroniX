@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import ConnectionTest from "../components/ConnectionTest";
 
 type Profile = {
   id: string;
@@ -429,6 +430,11 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Connection Test */}
+        <div className="mt-8">
+          <ConnectionTest />
         </div>
       </div>
     </div>

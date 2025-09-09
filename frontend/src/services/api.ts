@@ -95,6 +95,11 @@ class ApiClient {
   async getProfile(): Promise<any> {
     return this.request<any>('/profile');
   }
+
+  // Test API (no auth required)
+  async testConnection(): Promise<any> {
+    return this.request<any>('/test');
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

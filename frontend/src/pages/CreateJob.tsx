@@ -91,6 +91,12 @@ const SCHEDULE_EXAMPLES = [
 export default function CreateJob() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    data?: any;
+  } | null>(null);
   const [formData, setFormData] = useState<JobFormData>({
     name: "",
     schedule: "",
@@ -197,6 +203,82 @@ export default function CreateJob() {
 
   const insertScheduleExample = (schedule: string) => {
     setFormData((prev) => ({ ...prev, schedule }));
+  };
+
+  const testEndpoint = async () => {
+    if (!formData.endpoint.trim()) {
+      setTestResult({
+        success: false,
+        message: "Please enter an endpoint URL first",
+      });
+      return;
+    }
+
+    setTesting(true);
+    setTestResult(null);
+
+    try {
+      // Parse headers if provided
+      let headers: Record<string, string> = {};
+      if (formData.headers.trim()) {
+        try {
+          headers = JSON.parse(formData.headers);
+        } catch {
+          setTestResult({
+            success: false,
+            message: "Invalid JSON format for headers",
+          });
+          setTesting(false);
+          return;
+        }
+      }
+
+      // Prepare request options
+      const requestOptions: RequestInit = {
+        method: formData.method,
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
+      };
+
+      // Add body for POST/PUT/PATCH requests
+      if (
+        ["POST", "PUT", "PATCH"].includes(formData.method) &&
+        formData.body.trim()
+      ) {
+        requestOptions.body = formData.body;
+      }
+
+      // Make the test request
+      const response = await fetch(formData.endpoint, requestOptions);
+      const responseText = await response.text();
+
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = responseText;
+      }
+
+      setTestResult({
+        success: response.ok,
+        message: `Request completed with status ${response.status} ${response.statusText}`,
+        data: {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: responseData,
+        },
+      });
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : "Request failed",
+      });
+    } finally {
+      setTesting(false);
+    }
   };
 
   return (
@@ -345,6 +427,14 @@ export default function CreateJob() {
                       errors.endpoint ? "border-red-500" : "border-neutral-700"
                     }`}
                   />
+                  <button
+                    type="button"
+                    onClick={testEndpoint}
+                    disabled={testing || !formData.endpoint.trim()}
+                    className="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {testing ? "Testing..." : "Test"}
+                  </button>
                 </div>
                 {errors.endpoint && (
                   <p className="text-red-400 text-sm mt-1">{errors.endpoint}</p>
@@ -393,6 +483,45 @@ export default function CreateJob() {
               )}
             </div>
           </div>
+
+          {/* Test Result */}
+          {testResult && (
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+              <h2 className="text-xl font-semibold mb-4">Test Result</h2>
+              <div
+                className={`p-4 rounded-lg ${
+                  testResult.success
+                    ? "bg-green-500/20 border border-green-500/50"
+                    : "bg-red-500/20 border border-red-500/50"
+                }`}
+              >
+                <div className="flex items-center space-x-2 mb-3">
+                  <span
+                    className={`text-sm font-medium ${
+                      testResult.success ? "text-green-400" : "text-red-400"
+                    }`}
+                  >
+                    {testResult.success ? "✅ Success" : "❌ Failed"}
+                  </span>
+                  <span className="text-sm text-neutral-400">
+                    {testResult.message}
+                  </span>
+                </div>
+                {testResult.data && (
+                  <div className="mt-3">
+                    <details className="text-sm">
+                      <summary className="cursor-pointer text-neutral-300 hover:text-white mb-2">
+                        View Response Details
+                      </summary>
+                      <pre className="bg-neutral-800 p-3 rounded text-xs text-neutral-300 overflow-auto max-h-64">
+                        {JSON.stringify(testResult.data, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Advanced Settings */}
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
