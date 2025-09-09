@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import UserBadge from "./components/UserBadge";
 
 // Monochrome inline SVG icons
 const IconClock = () => (
@@ -131,6 +133,22 @@ const FeatureCard = ({
 };
 
 function App() {
+  const [isAuthed, setIsAuthed] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/profile", { credentials: "include" })
+      .then((res) => {
+        if (!mounted) return;
+        setIsAuthed(res.ok);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setIsAuthed(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const features = [
     {
       title: "Schedule & Monitor",
@@ -178,6 +196,9 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-white">
+      <div className="fixed top-4 right-4 z-50">
+        <UserBadge />
+      </div>
       {/* Hero Section */}
       <section className="flex-1 flex items-center justify-center px-8 pt-8 pb-4 min-h-[70vh] bg-black">
         <div className="text-center max-w-3xl mx-auto">
@@ -191,7 +212,7 @@ function App() {
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <a
-              href="/auth"
+              href={isAuthed ? "/dashboard" : "/auth"}
               className="rounded-xl border border-transparent px-6 py-4 text-sm font-semibold bg-white text-black shadow transition hover:bg-neutral-200"
             >
               Get Started

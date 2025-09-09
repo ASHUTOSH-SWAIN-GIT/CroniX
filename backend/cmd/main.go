@@ -71,6 +71,12 @@ func main() {
 	authConfig := config.LoadAuthConfig()
 	authService := services.NewAuthService(queries, authConfig.JWTSecret)
 
+	jobsService := services.NewJobsService(queries)
+	jobsHandler := handlers.NewJobsHandler(jobsService)
+
+	activeJobs, _ := queries.ListJobsByUser(context.Background(), db.ListJobsByUserParams{})
+	_ = activeJobs
+
 	authHandler := handlers.NewAuthHandler(authService, authConfig)
 
 	r := gin.Default()
@@ -79,10 +85,16 @@ func main() {
 	r.GET("/auth/google/callback", authHandler.Callback)
 	r.POST("/auth/logout", authHandler.Logout)
 
-	protected := r.Group("/api")
-	protected.Use(middleware.AuthMiddleware(authService))
+	api := r.Group("/api")
+	api.Use(middleware.AuthMiddleware(authService))
 	{
-		protected.GET("/profile", authHandler.GetProfile)
+		api.GET("/profile", authHandler.GetProfile)
+		api.POST("/jobs", jobsHandler.Create)
+		api.GET("/jobs", jobsHandler.List)
+		api.GET("/jobs/:id", jobsHandler.Get)
+		api.PUT("/jobs/:id", jobsHandler.Update)
+		api.DELETE("/jobs/:id", jobsHandler.Delete)
+		api.POST("/jobs/:id/run", jobsHandler.RunNow)
 	}
 
 	port := os.Getenv("PORT")
