@@ -91,6 +91,11 @@ class ApiClient {
     });
   }
 
+  async getJobLogs(id: string, limit = 50, offset = 0): Promise<JobLog[]> {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    return this.request<JobLog[]>(`/jobs/${id}/logs?${params}`);
+  }
+
   // Auth API
   async getProfile(): Promise<any> {
     return this.request<any>('/profile');

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { Job } from "../types/api.js";
+import type { Job, JobLog } from "../types/api.js";
 import { apiClient } from "../services/api";
 
 // Icons
@@ -128,6 +128,10 @@ export default function Jobs() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
   >("all");
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [logsByJob, setLogsByJob] = useState<Record<string, JobLog[]>>({});
+  const [logsLoading, setLogsLoading] = useState<Record<string, boolean>>({});
+  const [logsError, setLogsError] = useState<Record<string, string | null>>({});
 
   const fetchJobs = async () => {
     try {
@@ -145,6 +149,29 @@ export default function Jobs() {
   useEffect(() => {
     fetchJobs();
   }, []);
+
+  useEffect(() => {
+    if (!expandedJobId) return;
+    const fetchLogs = async () => {
+      try {
+        setLogsLoading((p) => ({ ...p, [expandedJobId]: true }));
+        setLogsError((p) => ({ ...p, [expandedJobId]: null }));
+        const data = await apiClient.getJobLogs(expandedJobId, 50, 0);
+        setLogsByJob((p) => ({ ...p, [expandedJobId]: data }));
+      } catch (err) {
+        setLogsError((p) => ({
+          ...p,
+          [expandedJobId]:
+            err instanceof Error ? err.message : "Failed to load logs",
+        }));
+      } finally {
+        setLogsLoading((p) => ({ ...p, [expandedJobId]: false }));
+      }
+    };
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 10000);
+    return () => clearInterval(interval);
+  }, [expandedJobId]);
 
   const toggleJobStatus = async (jobId: string, currentStatus: boolean) => {
     try {
@@ -320,7 +347,16 @@ export default function Jobs() {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
                       <h3 className="text-lg font-semibold text-white">
-                        {job.name}
+                        <button
+                          className="text-left hover:underline"
+                          onClick={() =>
+                            setExpandedJobId((prev) =>
+                              prev === job.id ? null : job.id
+                            )
+                          }
+                        >
+                          {job.name}
+                        </button>
                       </h3>
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -392,6 +428,98 @@ export default function Jobs() {
                     </button>
                   </div>
                 </div>
+
+                {expandedJobId === job.id && (
+                  <div className="mt-4 border-t border-neutral-800 pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-semibold">Recent Logs</h4>
+                        <span className="text-xs text-neutral-500">
+                          {job.method} • {job.endpoint}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={async () => {
+                            try {
+                              await apiClient.runJob(job.id);
+                              const data = await apiClient.getJobLogs(
+                                job.id,
+                                50,
+                                0
+                              );
+                              setLogsByJob((p) => ({ ...p, [job.id]: data }));
+                            } catch (err) {
+                              setLogsError((p) => ({
+                                ...p,
+                                [job.id]:
+                                  err instanceof Error
+                                    ? err.message
+                                    : "Failed to run job",
+                              }));
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs rounded bg-white text-black hover:bg-neutral-200"
+                          title="Trigger this job now"
+                        >
+                          Run now
+                        </button>
+                        <button
+                          onClick={() => setExpandedJobId(null)}
+                          className="text-sm text-neutral-400 hover:text-white"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                    {logsLoading[job.id] ? (
+                      <div className="text-neutral-400 text-sm">
+                        Loading logs...
+                      </div>
+                    ) : logsError[job.id] ? (
+                      <div className="text-red-400 text-sm">
+                        {logsError[job.id]}
+                      </div>
+                    ) : (logsByJob[job.id] || []).length === 0 ? (
+                      <div className="text-neutral-400 text-sm">
+                        No logs yet.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-neutral-800">
+                        {(logsByJob[job.id] || []).map((log) => (
+                          <div
+                            key={log.id}
+                            className="py-2 grid grid-cols-12 gap-4 text-xs"
+                          >
+                            <div className="col-span-4 text-neutral-400">
+                              {new Date(log.started_at).toLocaleString()}
+                            </div>
+                            <div className="col-span-2">
+                              <span
+                                className={`px-2 py-1 rounded text-[10px] font-medium ${
+                                  log.status === "success"
+                                    ? "bg-green-500/20 text-green-400"
+                                    : "bg-red-500/20 text-red-400"
+                                }`}
+                              >
+                                {log.status}
+                              </span>
+                            </div>
+                            <div className="col-span-2 text-neutral-300">
+                              {log.response_code ?? "-"}
+                            </div>
+                            <div className="col-span-2 text-neutral-300">
+                              {log.duration_ms ?? "-"} ms
+                            </div>
+                            <div className="col-span-2 text-neutral-400 truncate">
+                              {log.error || "OK"}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
