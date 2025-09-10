@@ -94,18 +94,6 @@ const IconGlobe = ({ className = "w-4 h-4" }: { className?: string }) => (
   </svg>
 );
 
-const IconFilter = ({ className = "w-4 h-4" }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46" />
-  </svg>
-);
-
 const IconSearch = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg
     className={className}
@@ -119,15 +107,85 @@ const IconSearch = ({ className = "w-4 h-4" }: { className?: string }) => (
   </svg>
 );
 
+const IconX = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M18 6L6 18M6 6l12 12" />
+  </svg>
+);
+
+// Delete Confirmation Dialog
+const DeleteConfirmDialog = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  jobName,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  jobName: string;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 max-w-md w-full">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Delete Job</h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-neutral-800 transition-colors"
+          >
+            <IconX className="w-4 h-4 text-neutral-400" />
+          </button>
+        </div>
+
+        <p className="text-neutral-300 mb-2">
+          Are you sure you want to delete this job?
+        </p>
+        <p className="text-neutral-400 text-sm mb-6">
+          <span className="font-medium">"{jobName}"</span> will be permanently
+          removed and cannot be recovered.
+        </p>
+
+        <div className="flex space-x-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-neutral-700 text-neutral-300 rounded-lg hover:bg-neutral-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Jobs() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    job: Job | null;
+  }>({
+    isOpen: false,
+    job: null,
+  });
 
   const fetchJobs = async () => {
     try {
@@ -149,7 +207,6 @@ export default function Jobs() {
   const toggleJobStatus = async (jobId: string, currentStatus: boolean) => {
     try {
       await apiClient.updateJob(jobId, { active: !currentStatus });
-      // Update local state
       setJobs(
         jobs.map((job) =>
           job.id === jobId ? { ...job, active: !currentStatus } : job
@@ -162,55 +219,46 @@ export default function Jobs() {
     }
   };
 
-  const deleteJob = async (jobId: string) => {
-    if (!confirm("Are you sure you want to delete this job?")) return;
+  const handleDeleteClick = (job: Job) => {
+    setDeleteDialog({ isOpen: true, job });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.job) return;
 
     try {
-      await apiClient.deleteJob(jobId);
-      // Update local state
-      setJobs(jobs.filter((job) => job.id !== jobId));
+      await apiClient.deleteJob(deleteDialog.job.id);
+      setJobs(jobs.filter((job) => job.id !== deleteDialog.job!.id));
+      setDeleteDialog({ isOpen: false, job: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete job");
     }
   };
 
   const filteredJobs = jobs.filter((job) => {
-    const matchesSearch =
-      job.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.endpoint.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && job.active) ||
-      (statusFilter === "inactive" && !job.active);
-    return matchesSearch && matchesStatus;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      job.name.toLowerCase().includes(searchLower) ||
+      job.endpoint.toLowerCase().includes(searchLower)
+    );
   });
-
-  const getMethodColor = (method: string) => {
-    switch (method.toUpperCase()) {
-      case "GET":
-        return "bg-blue-500/20 text-blue-400";
-      case "POST":
-        return "bg-green-500/20 text-green-400";
-      case "PUT":
-        return "bg-yellow-500/20 text-yellow-400";
-      case "DELETE":
-        return "bg-red-500/20 text-red-400";
-      case "PATCH":
-        return "bg-purple-500/20 text-purple-400";
-      default:
-        return "bg-neutral-500/20 text-neutral-400";
-    }
-  };
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-neutral-800 rounded w-32 mb-6"></div>
+      <div className="p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <div className="h-8 bg-neutral-800 rounded w-32"></div>
+                <div className="h-4 bg-neutral-800 rounded w-48"></div>
+              </div>
+              <div className="h-10 bg-neutral-800 rounded w-32"></div>
+            </div>
+            <div className="h-10 bg-neutral-800 rounded w-80"></div>
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-24 bg-neutral-900 rounded-xl"></div>
+                <div key={i} className="h-32 bg-neutral-800 rounded-xl"></div>
               ))}
             </div>
           </div>
@@ -221,14 +269,14 @@ export default function Jobs() {
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
-            <p className="text-red-300 mb-4">{error}</p>
+      <div className="p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="border border-neutral-800 rounded-xl p-6 bg-neutral-900">
+            <h2 className="text-xl font-semibold text-white mb-2">Error</h2>
+            <p className="text-neutral-400 mb-4">{error}</p>
             <button
               onClick={fetchJobs}
-              className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+              className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors"
             >
               Try Again
             </button>
@@ -239,171 +287,154 @@ export default function Jobs() {
   }
 
   return (
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Jobs</h1>
-            <p className="text-neutral-400">
-              Manage your cron jobs and schedules
-            </p>
-          </div>
-          <button
-            onClick={() => navigate("/dashboard/jobs/create")}
-            className="flex items-center space-x-2 bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-neutral-200 transition-colors"
-          >
-            <IconPlus />
-            <span>Create Job</span>
-          </button>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <IconSearch className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
-            <input
-              type="text"
-              placeholder="Search jobs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-600"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <IconFilter className="w-4 h-4 text-neutral-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as "all" | "active" | "inactive")
-              }
-              className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-neutral-600"
-            >
-              <option value="all">All Jobs</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Jobs List */}
-
-        {filteredJobs.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <IconClock className="w-6 h-6 text-neutral-400" />
+    <>
+      <div className="p-6">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Jobs</h1>
+              <p className="text-neutral-400">
+                Manage your cron jobs and schedules
+              </p>
             </div>
-            <h3 className="text-xl font-semibold mb-2">No jobs found</h3>
-            <p className="text-neutral-400 mb-6">
-              {searchTerm || statusFilter !== "all"
-                ? "Try adjusting your search or filters"
-                : "Create your first cron job to get started"}
-            </p>
-            {!searchTerm && statusFilter === "all" && (
-              <button
-                onClick={() => navigate("/dashboard/jobs/create")}
-                className="inline-flex items-center space-x-2 bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-neutral-200 transition-colors"
-              >
-                <IconPlus />
-                <span>Create Job</span>
-              </button>
-            )}
+            <button
+              onClick={() => navigate("/dashboard/jobs/create")}
+              className="flex items-center space-x-2 bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-neutral-200 transition-colors"
+            >
+              <IconPlus className="w-4 h-4" />
+              <span>Create Job</span>
+            </button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredJobs.map((job) => (
-              <div
-                key={job.id}
-                className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 hover:border-neutral-700 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-3">
-                      <h3 className="text-lg font-semibold text-white">
-                        <button
-                          className="text-left hover:underline"
-                          onClick={() =>
-                            navigate(`/dashboard/jobs/${job.id}/logs`)
-                          }
-                        >
-                          {job.name}
-                        </button>
-                      </h3>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          job.active
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-neutral-500/20 text-neutral-400"
-                        }`}
-                      >
-                        {job.active ? "Active" : "Inactive"}
-                      </span>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getMethodColor(
-                          job.method
-                        )}`}
-                      >
-                        {job.method}
-                      </span>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center space-x-2 text-neutral-400">
-                        <IconGlobe className="w-4 h-4" />
-                        <span className="truncate">{job.endpoint}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-neutral-400">
-                        <IconClock className="w-4 h-4" />
-                        <span>{job.schedule}</span>
-                      </div>
-                    </div>
+          {/* Search */}
+          <div className="mb-6">
+            <div className="relative w-full max-w-md">
+              <IconSearch className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+              <input
+                type="text"
+                placeholder="Search jobs..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-600 transition-colors"
+              />
+            </div>
+          </div>
 
-                    <div className="mt-3 text-xs text-neutral-500">
-                      Created {new Date(job.created_at).toLocaleDateString()}
-                      {job.updated_at !== job.created_at && (
-                        <span>
-                          {" "}
-                          • Updated{" "}
-                          {new Date(job.updated_at).toLocaleDateString()}
+          {/* Jobs List */}
+          {filteredJobs.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <IconClock className="w-6 h-6 text-neutral-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                {searchTerm ? "No jobs found" : "No jobs yet"}
+              </h3>
+              <p className="text-neutral-400 mb-6">
+                {searchTerm
+                  ? "Try adjusting your search terms"
+                  : "Create your first cron job to get started"}
+              </p>
+              {!searchTerm && (
+                <button
+                  onClick={() => navigate("/dashboard/jobs/create")}
+                  className="inline-flex items-center space-x-2 bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-neutral-200 transition-colors"
+                >
+                  <IconPlus className="w-4 h-4" />
+                  <span>Create Job</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredJobs.map((job) => (
+                <div
+                  key={job.id}
+                  className="border border-neutral-800 bg-neutral-900 rounded-xl p-6 hover:border-neutral-700 transition-all duration-200"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <h3 className="text-lg font-medium text-white truncate">
+                          <button
+                            className="hover:underline text-left"
+                            onClick={() =>
+                              navigate(`/dashboard/jobs/${job.id}/logs`)
+                            }
+                          >
+                            {job.name}
+                          </button>
+                        </h3>
+                        <span className="px-2 py-1 rounded-full text-xs bg-neutral-800 text-neutral-300 shrink-0">
+                          {job.active ? "Active" : "Inactive"}
                         </span>
-                      )}
+                        <span className="px-2 py-1 rounded-full text-xs bg-neutral-800 text-neutral-300 shrink-0">
+                          {job.method}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center space-x-2 text-neutral-400">
+                          <IconGlobe className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{job.endpoint}</span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-neutral-400">
+                          <IconClock className="w-4 h-4 shrink-0" />
+                          <span>{job.schedule}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 text-xs text-neutral-500">
+                        Created {new Date(job.created_at).toLocaleDateString()}
+                        {job.updated_at !== job.created_at && (
+                          <span>
+                            {" "}
+                            • Updated{" "}
+                            {new Date(job.updated_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center space-x-2 ml-4">
-                    <button
-                      onClick={() => toggleJobStatus(job.id, job.active)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        job.active
-                          ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
-                          : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                      }`}
-                      title={job.active ? "Pause job" : "Start job"}
-                    >
-                      {job.active ? <IconPause /> : <IconPlay />}
-                    </button>
+                    <div className="flex items-center space-x-2 ml-6 shrink-0">
+                      <button
+                        onClick={() => toggleJobStatus(job.id, job.active)}
+                        className="p-2.5 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors"
+                        title={job.active ? "Pause job" : "Start job"}
+                      >
+                        {job.active ? <IconPause /> : <IconPlay />}
+                      </button>
 
-                    <button
-                      className="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
-                      title="Edit job"
-                    >
-                      <IconEdit />
-                    </button>
+                      <button
+                        className="p-2.5 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors"
+                        title="Edit job"
+                      >
+                        <IconEdit />
+                      </button>
 
-                    <button
-                      onClick={() => deleteJob(job.id)}
-                      className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                      title="Delete job"
-                    >
-                      <IconTrash />
-                    </button>
+                      <button
+                        onClick={() => handleDeleteClick(job)}
+                        className="p-2.5 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors"
+                        title="Delete job"
+                      >
+                        <IconTrash />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, job: null })}
+        onConfirm={confirmDelete}
+        jobName={deleteDialog.job?.name || ""}
+      />
+    </>
   );
 }

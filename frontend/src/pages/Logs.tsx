@@ -69,6 +69,271 @@ const IconGlobe = ({ className = "w-4 h-4" }: { className?: string }) => (
   </svg>
 );
 
+const IconX = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M18 6L6 18M6 6l12 12" />
+  </svg>
+);
+
+const IconCopy = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+const IconCheck = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+);
+
+// Log Detail Dialog Component
+const LogDetailDialog = ({
+  isOpen,
+  onClose,
+  log,
+  job,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  log: JobLog | null;
+  job: Job | null;
+}) => {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  if (!isOpen || !log) return null;
+
+  const copyToClipboard = async (text: string, type: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(type);
+      setTimeout(() => setCopied(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "success":
+        return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "failure":
+        return "bg-red-500/20 text-red-400 border-red-500/30";
+      default:
+        return "bg-neutral-500/20 text-neutral-400 border-neutral-500/30";
+    }
+  };
+
+  const getResponseCodeColor = (code: number | null) => {
+    if (!code) return "text-neutral-400";
+    if (code >= 200 && code < 300) return "text-green-400";
+    if (code >= 400 && code < 500) return "text-yellow-400";
+    if (code >= 500) return "text-red-400";
+    return "text-neutral-400";
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 border border-neutral-700 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-neutral-700">
+          <div>
+            <h3 className="text-xl font-semibold text-white">
+              Execution Details
+            </h3>
+            <p className="text-sm text-neutral-400">
+              {job?.name} • {formatTimestamp(log.started_at)}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-neutral-700 transition-colors"
+          >
+            <IconX className="w-5 h-5 text-neutral-400" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          <div className="space-y-6">
+            {/* Status and Basic Info */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-neutral-800/50 rounded-lg p-4">
+                <div className="text-sm text-neutral-400 mb-1">Status</div>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
+                    log.status
+                  )}`}
+                >
+                  {log.status.toUpperCase()}
+                </span>
+              </div>
+              <div className="bg-neutral-800/50 rounded-lg p-4">
+                <div className="text-sm text-neutral-400 mb-1">
+                  Response Code
+                </div>
+                <div
+                  className={`text-lg font-semibold ${getResponseCodeColor(
+                    log.response_code
+                  )}`}
+                >
+                  {log.response_code ? `HTTP ${log.response_code}` : "N/A"}
+                </div>
+              </div>
+              <div className="bg-neutral-800/50 rounded-lg p-4">
+                <div className="text-sm text-neutral-400 mb-1">Duration</div>
+                <div className="text-lg font-semibold text-white">
+                  {log.duration_ms ? `${log.duration_ms}ms` : "N/A"}
+                </div>
+              </div>
+            </div>
+
+            {/* Timestamps */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-neutral-800/50 rounded-lg p-4">
+                <div className="text-sm text-neutral-400 mb-1">Started At</div>
+                <div className="text-white font-mono text-sm">
+                  {formatTimestamp(log.started_at)}
+                </div>
+              </div>
+              <div className="bg-neutral-800/50 rounded-lg p-4">
+                <div className="text-sm text-neutral-400 mb-1">Finished At</div>
+                <div className="text-white font-mono text-sm">
+                  {log.finished_at ? formatTimestamp(log.finished_at) : "N/A"}
+                </div>
+              </div>
+            </div>
+
+            {/* Job Details */}
+            {job && (
+              <div className="bg-neutral-800/50 rounded-lg p-4">
+                <div className="text-sm text-neutral-400 mb-3">Job Details</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-neutral-500 mb-1">
+                      Endpoint
+                    </div>
+                    <div className="text-white font-mono text-sm break-all">
+                      {job.method} {job.endpoint}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-neutral-500 mb-1">
+                      Schedule
+                    </div>
+                    <div className="text-white font-mono text-sm">
+                      {job.schedule}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error Details */}
+            {log.error && (
+              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-red-400 font-medium">Error Details</div>
+                  <button
+                    onClick={() => copyToClipboard(log.error || "", "error")}
+                    className="flex items-center space-x-1 px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30 transition-colors"
+                  >
+                    {copied === "error" ? (
+                      <IconCheck className="w-3 h-3" />
+                    ) : (
+                      <IconCopy className="w-3 h-3" />
+                    )}
+                    <span>{copied === "error" ? "Copied!" : "Copy"}</span>
+                  </button>
+                </div>
+                <pre className="text-red-300 text-sm font-mono whitespace-pre-wrap break-words bg-red-950/20 p-3 rounded border border-red-500/20">
+                  {log.error}
+                </pre>
+              </div>
+            )}
+
+            {/* Response Body */}
+            {log.response_body && (
+              <div className="bg-neutral-800/50 border border-neutral-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-neutral-300 font-medium">
+                    Response Body
+                  </div>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(
+                        typeof log.response_body === "string"
+                          ? log.response_body
+                          : JSON.stringify(log.response_body, null, 2),
+                        "response"
+                      )
+                    }
+                    className="flex items-center space-x-1 px-2 py-1 bg-neutral-600/20 text-neutral-300 rounded text-xs hover:bg-neutral-600/30 transition-colors"
+                  >
+                    {copied === "response" ? (
+                      <IconCheck className="w-3 h-3" />
+                    ) : (
+                      <IconCopy className="w-3 h-3" />
+                    )}
+                    <span>{copied === "response" ? "Copied!" : "Copy"}</span>
+                  </button>
+                </div>
+                <pre className="text-neutral-300 text-sm font-mono whitespace-pre-wrap break-words bg-neutral-900/50 p-3 rounded border border-neutral-600/50 max-h-60 overflow-y-auto">
+                  {typeof log.response_body === "string"
+                    ? log.response_body
+                    : JSON.stringify(log.response_body, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {/* Log ID */}
+            <div className="bg-neutral-800/50 rounded-lg p-4">
+              <div className="text-sm text-neutral-400 mb-1">Log ID</div>
+              <div className="flex items-center justify-between">
+                <div className="text-white font-mono text-sm">{log.id}</div>
+                <button
+                  onClick={() => copyToClipboard(log.id, "id")}
+                  className="flex items-center space-x-1 px-2 py-1 bg-neutral-600/20 text-neutral-300 rounded text-xs hover:bg-neutral-600/30 transition-colors"
+                >
+                  {copied === "id" ? (
+                    <IconCheck className="w-3 h-3" />
+                  ) : (
+                    <IconCopy className="w-3 h-3" />
+                  )}
+                  <span>{copied === "id" ? "Copied!" : "Copy"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Logs() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -78,6 +343,11 @@ export default function Logs() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<JobLog | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const logsPerPage = 5;
 
   // Fetch job details
   useEffect(() => {
@@ -100,13 +370,23 @@ export default function Logs() {
   }, [id]);
 
   // Fetch logs
-  const fetchLogs = async () => {
+  const fetchLogs = async (page: number = currentPage) => {
     if (!id) return;
 
     setLogsLoading(true);
     try {
-      const logsData = await apiClient.getJobLogs(id, 100, 0);
+      const offset = (page - 1) * logsPerPage;
+      const logsData = await apiClient.getJobLogs(id, logsPerPage, offset);
       setLogs(logsData);
+
+      // Calculate total pages (we'll need to get total count from API or estimate)
+      // For now, we'll assume there are more logs if we get a full page
+      if (logsData.length === logsPerPage) {
+        setTotalPages(page + 1); // Assume there's at least one more page
+      } else {
+        setTotalPages(page);
+      }
+
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch logs");
@@ -118,11 +398,18 @@ export default function Logs() {
   // Fetch logs on mount and set up auto-refresh
   useEffect(() => {
     if (id) {
-      fetchLogs();
-      const interval = setInterval(fetchLogs, 10000); // Refresh every 10 seconds
+      fetchLogs(1); // Start with page 1
+      const interval = setInterval(() => fetchLogs(currentPage), 10000); // Refresh every 10 seconds
       return () => clearInterval(interval);
     }
   }, [id]);
+
+  // Fetch logs when page changes
+  useEffect(() => {
+    if (id && currentPage > 1) {
+      fetchLogs(currentPage);
+    }
+  }, [currentPage]);
 
   // Run job manually
   const runJob = async () => {
@@ -131,12 +418,46 @@ export default function Logs() {
     setRunning(true);
     try {
       await apiClient.runJob(id);
-      // Refresh logs after running
-      setTimeout(fetchLogs, 1000);
+      // Refresh logs after running and go to first page to see the new log
+      setTimeout(() => {
+        setCurrentPage(1);
+        fetchLogs(1);
+      }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run job");
     } finally {
       setRunning(false);
+    }
+  };
+
+  // Open log detail dialog
+  const openLogDialog = (log: JobLog) => {
+    setSelectedLog(log);
+    setDialogOpen(true);
+  };
+
+  // Close log detail dialog
+  const closeLogDialog = () => {
+    setDialogOpen(false);
+    setSelectedLog(null);
+  };
+
+  // Pagination functions
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -216,7 +537,7 @@ export default function Logs() {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={fetchLogs}
+              onClick={() => fetchLogs(currentPage)}
               disabled={logsLoading}
               className="flex items-center space-x-2 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 text-white rounded-lg transition-colors"
             >
@@ -276,7 +597,7 @@ export default function Logs() {
               <h2 className="text-xl font-semibold text-white">
                 Execution History
                 <span className="text-sm font-normal text-neutral-400 ml-2">
-                  ({logs.length} entries)
+                  (Page {currentPage} of {totalPages})
                 </span>
               </h2>
               <div className="text-sm text-neutral-400">
@@ -301,7 +622,8 @@ export default function Logs() {
                 {logs.map((log) => (
                   <div
                     key={log.id}
-                    className="bg-neutral-800 border border-neutral-700 rounded-lg p-4"
+                    onClick={() => openLogDialog(log)}
+                    className="bg-neutral-800 border border-neutral-700 rounded-lg p-4 cursor-pointer hover:bg-neutral-700 hover:border-neutral-600 transition-all duration-200 hover:shadow-lg"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-4">
@@ -343,32 +665,89 @@ export default function Logs() {
                       </div>
                     )}
 
-                    {log.response_body && (
-                      <div className="mt-3 p-3 bg-neutral-900 border border-neutral-700 rounded">
-                        <div className="text-neutral-300 text-sm font-medium mb-1">
-                          Response Body:
-                        </div>
-                        <pre className="text-neutral-300 text-xs font-mono whitespace-pre-wrap break-words">
-                          {typeof log.response_body === "string"
-                            ? log.response_body
-                            : JSON.stringify(log.response_body, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-
                     <div className="flex items-center justify-between mt-3 text-xs text-neutral-500">
                       <div>Started: {formatTimestamp(log.started_at)}</div>
                       {log.finished_at && (
                         <div>Finished: {formatTimestamp(log.finished_at)}</div>
                       )}
                     </div>
+
+                    {/* Click indicator */}
+                    <div className="mt-3 text-xs text-neutral-500 text-center">
+                      Click to view detailed information
+                    </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {logs.length > 0 && totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between">
+                <div className="text-sm text-neutral-400">
+                  Showing {logs.length} logs on page {currentPage} of{" "}
+                  {totalPages}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 text-sm bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 disabled:bg-neutral-900 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+
+                  {/* Page numbers */}
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => goToPage(pageNum)}
+                          className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                            currentPage === pageNum
+                              ? "bg-emerald-600 text-white"
+                              : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 text-sm bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 disabled:bg-neutral-900 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Log Detail Dialog */}
+      <LogDetailDialog
+        isOpen={dialogOpen}
+        onClose={closeLogDialog}
+        log={selectedLog}
+        job={job}
+      />
     </div>
   );
 }

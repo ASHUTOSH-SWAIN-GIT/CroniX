@@ -1,34 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-// removed backend connection test from dashboard
+import { apiClient } from "../services/api";
+import type { Job, JobLog } from "../types/api";
 
 type Profile = {
   id: string;
   email: string;
   name?: string;
   avatar_url?: string;
-};
-
-type Job = {
-  id: string;
-  name: string;
-  schedule: string;
-  endpoint: string;
-  method: string;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-type JobLog = {
-  id: string;
-  job_id: string;
-  started_at: string;
-  finished_at: string;
-  duration_ms: number;
-  status: string;
-  response_code: number;
-  error?: string;
 };
 
 // Icons
@@ -101,86 +80,57 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [recentLogs, setRecentLogs] = useState<JobLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mock data for frontend-only demo
-    const mockProfile = {
-      id: "1",
-      email: "user@example.com",
-      name: "Demo User",
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch profile, jobs, and recent logs in parallel
+        const [profileData, jobsData] = await Promise.all([
+          apiClient.getProfile(),
+          apiClient.getJobs(10, 0), // Get first 10 jobs
+        ]);
+
+        setProfile(profileData);
+        setJobs(jobsData);
+
+        // Fetch recent logs for all jobs (limit to 20 most recent)
+        if (jobsData.length > 0) {
+          const allLogs: JobLog[] = [];
+          for (const job of jobsData.slice(0, 5)) {
+            // Get logs for first 5 jobs
+            try {
+              const logs = await apiClient.getJobLogs(job.id, 4, 0); // 4 logs per job
+              allLogs.push(...logs);
+            } catch (err) {
+              console.warn(`Failed to fetch logs for job ${job.id}:`, err);
+            }
+          }
+
+          // Sort by started_at and take most recent
+          const sortedLogs = allLogs
+            .sort(
+              (a, b) =>
+                new Date(b.started_at).getTime() -
+                new Date(a.started_at).getTime()
+            )
+            .slice(0, 10);
+
+          setRecentLogs(sortedLogs);
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load dashboard data"
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const mockJobs = [
-      {
-        id: "1",
-        name: "Daily Backup",
-        schedule: "0 2 * * *",
-        endpoint: "https://api.example.com/backup",
-        method: "POST",
-        active: true,
-        created_at: "2024-01-15T10:00:00Z",
-        updated_at: "2024-01-15T10:00:00Z",
-      },
-      {
-        id: "2",
-        name: "Health Check",
-        schedule: "*/5 * * * *",
-        endpoint: "https://api.example.com/health",
-        method: "GET",
-        active: true,
-        created_at: "2024-01-14T15:30:00Z",
-        updated_at: "2024-01-14T15:30:00Z",
-      },
-      {
-        id: "3",
-        name: "Data Sync",
-        schedule: "0 */6 * * *",
-        endpoint: "https://api.example.com/sync",
-        method: "PUT",
-        active: false,
-        created_at: "2024-01-13T09:15:00Z",
-        updated_at: "2024-01-13T09:15:00Z",
-      },
-    ];
-
-    const mockLogs = [
-      {
-        id: "1",
-        job_id: "1",
-        started_at: "2024-01-15T02:00:00Z",
-        finished_at: "2024-01-15T02:00:15Z",
-        duration_ms: 15000,
-        status: "success",
-        response_code: 200,
-      },
-      {
-        id: "2",
-        job_id: "2",
-        started_at: "2024-01-15T01:55:00Z",
-        finished_at: "2024-01-15T01:55:02Z",
-        duration_ms: 2000,
-        status: "success",
-        response_code: 200,
-      },
-      {
-        id: "3",
-        job_id: "1",
-        started_at: "2024-01-15T01:50:00Z",
-        finished_at: "2024-01-15T01:50:18Z",
-        duration_ms: 18000,
-        status: "error",
-        response_code: 500,
-        error: "Connection timeout",
-      },
-    ];
-
-    // Simulate loading delay
-    setTimeout(() => {
-      setProfile(mockProfile);
-      setJobs(mockJobs);
-      setRecentLogs(mockLogs);
-      setLoading(false);
-    }, 1000);
+    fetchDashboardData();
   }, []);
 
   const activeJobs = jobs.filter((job) => job.active).length;
@@ -235,6 +185,25 @@ export default function Dashboard() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="border border-neutral-800 rounded-xl p-6 bg-neutral-900">
+            <h2 className="text-xl font-semibold text-white mb-2">Error</h2>
+            <p className="text-neutral-400 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
@@ -278,9 +247,9 @@ export default function Dashboard() {
               <span className="text-2xl font-bold">{totalExecutions}</span>
             </div>
             <h3 className="text-sm font-medium text-neutral-300 mb-1">
-              Executions
+              Recent Executions
             </h3>
-            <p className="text-xs text-neutral-500">Last 24 hours</p>
+            <p className="text-xs text-neutral-500">Last 10 executions</p>
           </div>
 
           <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-6">
@@ -305,7 +274,7 @@ export default function Dashboard() {
                 {recentLogs.length > 0
                   ? Math.round(
                       recentLogs.reduce(
-                        (acc, log) => acc + log.duration_ms,
+                        (acc, log) => acc + (log.duration_ms || 0),
                         0
                       ) / recentLogs.length
                     )
