@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import ConnectionTest from "../components/ConnectionTest";
+// removed backend connection test from dashboard
 
 type Profile = {
   id: string;
@@ -432,10 +432,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Connection Test */}
-        <div className="mt-8">
-          <ConnectionTest />
-        </div>
+        {/* Connection Test removed */}
       </div>
     </div>
   );

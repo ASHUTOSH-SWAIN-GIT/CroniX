@@ -343,6 +343,19 @@ export default function Logs() {
                       </div>
                     )}
 
+                    {log.response_body && (
+                      <div className="mt-3 p-3 bg-neutral-900 border border-neutral-700 rounded">
+                        <div className="text-neutral-300 text-sm font-medium mb-1">
+                          Response Body:
+                        </div>
+                        <pre className="text-neutral-300 text-xs font-mono whitespace-pre-wrap break-words">
+                          {typeof log.response_body === "string"
+                            ? log.response_body
+                            : JSON.stringify(log.response_body, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between mt-3 text-xs text-neutral-500">
                       <div>Started: {formatTimestamp(log.started_at)}</div>
                       {log.finished_at && (

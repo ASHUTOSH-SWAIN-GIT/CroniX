@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 
@@ -63,6 +64,7 @@ func (s *JobsService) RunOnce(ctx context.Context, job db.Job) (db.JobLog, error
 	status := "success"
 
 	var errStr string
+	var respBodyStr string
 
 	hasResp := false
 	reqBody := []byte(nil)
@@ -82,6 +84,13 @@ func (s *JobsService) RunOnce(ctx context.Context, job db.Job) (db.JobLog, error
 		}
 
 		resp, err := http.DefaultClient.Do(req)
+		if resp != nil && resp.Body != nil {
+			const max = 1 << 20 // 1MB
+			limited := io.LimitReader(resp.Body, max)
+			b, _ := io.ReadAll(limited)
+			respBodyStr = string(b)
+			resp.Body.Close()
+		}
 		if err != nil {
 			status, errStr = "failure", err.Error()
 		}
@@ -100,6 +109,7 @@ func (s *JobsService) RunOnce(ctx context.Context, job db.Job) (db.JobLog, error
 		Status:       status,
 		ResponseCode: pgtype.Int4{Int32: int32(code), Valid: hasResp},
 		Error:        pgtype.Text{String: errStr, Valid: errStr != ""},
+		ResponseBody: pgtype.Text{String: respBodyStr, Valid: respBodyStr != ""},
 	})
 }
 

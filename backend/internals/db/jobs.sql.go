@@ -89,9 +89,9 @@ func (q *Queries) GetJob(ctx context.Context, id pgtype.UUID) (Job, error) {
 }
 
 const insertJobLog = `-- name: InsertJobLog :one
-INSERT INTO job_logs (job_id, started_at, finished_at, duration_ms, status, response_code, error)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, job_id, started_at, finished_at, duration_ms, status, response_code, error
+INSERT INTO job_logs (job_id, started_at, finished_at, duration_ms, status, response_code, error, response_body)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, job_id, started_at, finished_at, duration_ms, status, response_code, error, response_body
 `
 
 type InsertJobLogParams struct {
@@ -102,6 +102,7 @@ type InsertJobLogParams struct {
 	Status       string             `json:"status"`
 	ResponseCode pgtype.Int4        `json:"response_code"`
 	Error        pgtype.Text        `json:"error"`
+	ResponseBody pgtype.Text        `json:"response_body"`
 }
 
 func (q *Queries) InsertJobLog(ctx context.Context, arg InsertJobLogParams) (JobLog, error) {
@@ -113,6 +114,7 @@ func (q *Queries) InsertJobLog(ctx context.Context, arg InsertJobLogParams) (Job
 		arg.Status,
 		arg.ResponseCode,
 		arg.Error,
+		arg.ResponseBody,
 	)
 	var i JobLog
 	err := row.Scan(
@@ -124,6 +126,7 @@ func (q *Queries) InsertJobLog(ctx context.Context, arg InsertJobLogParams) (Job
 		&i.Status,
 		&i.ResponseCode,
 		&i.Error,
+		&i.ResponseBody,
 	)
 	return i, err
 }
@@ -167,7 +170,8 @@ func (q *Queries) ListActiveJobs(ctx context.Context) ([]Job, error) {
 }
 
 const listJobLogs = `-- name: ListJobLogs :many
-SELECT id, job_id, started_at, finished_at, duration_ms, status, response_code, error FROM job_logs
+SELECT id, job_id, started_at, finished_at, duration_ms, status, response_code, error, response_body
+FROM job_logs
 WHERE job_id = $1
 ORDER BY started_at DESC
 LIMIT $2 OFFSET $3
@@ -197,6 +201,7 @@ func (q *Queries) ListJobLogs(ctx context.Context, arg ListJobLogsParams) ([]Job
 			&i.Status,
 			&i.ResponseCode,
 			&i.Error,
+			&i.ResponseBody,
 		); err != nil {
 			return nil, err
 		}
@@ -256,10 +261,10 @@ func (q *Queries) ListJobsByUser(ctx context.Context, arg ListJobsByUserParams) 
 const updateJob = `-- name: UpdateJob :one
 UPDATE jobs
 SET
-  name = COALESCE($2, name),
-  schedule = COALESCE($3, schedule),
-  endpoint = COALESCE($4, endpoint),
-  method = COALESCE($5, method),
+  name = COALESCE(NULLIF($2, ''), name),
+  schedule = COALESCE(NULLIF($3, ''), schedule),
+  endpoint = COALESCE(NULLIF($4, ''), endpoint),
+  method = COALESCE(NULLIF($5, ''), method),
   headers = COALESCE($6, headers),
   body = COALESCE($7, body),
   active = COALESCE($8, active),

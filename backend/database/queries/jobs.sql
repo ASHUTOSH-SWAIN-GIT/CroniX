@@ -15,10 +15,10 @@ LIMIT $2 OFFSET $3;
 -- name: UpdateJob :one
 UPDATE jobs
 SET
-  name = COALESCE($2, name),
-  schedule = COALESCE($3, schedule),
-  endpoint = COALESCE($4, endpoint),
-  method = COALESCE($5, method),
+  name = COALESCE(NULLIF($2, ''), name),
+  schedule = COALESCE(NULLIF($3, ''), schedule),
+  endpoint = COALESCE(NULLIF($4, ''), endpoint),
+  method = COALESCE(NULLIF($5, ''), method),
   headers = COALESCE($6, headers),
   body = COALESCE($7, body),
   active = COALESCE($8, active),
@@ -30,12 +30,14 @@ RETURNING *;
 DELETE FROM jobs WHERE id = $1;
 
 -- name: InsertJobLog :one
-INSERT INTO job_logs (job_id, started_at, finished_at, duration_ms, status, response_code, error)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO job_logs (job_id, started_at, finished_at, duration_ms, status, response_code, error, response_body)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
+
 -- name: ListJobLogs :many
-SELECT * FROM job_logs
+SELECT *
+FROM job_logs
 WHERE job_id = $1
 ORDER BY started_at DESC
 LIMIT $2 OFFSET $3;

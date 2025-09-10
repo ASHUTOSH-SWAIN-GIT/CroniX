@@ -31,6 +31,7 @@ type JobLog struct {
 	Status       string             `json:"status"`
 	ResponseCode pgtype.Int4        `json:"response_code"`
 	Error        pgtype.Text        `json:"error"`
+	ResponseBody pgtype.Text        `json:"response_body"`
 }
 
 type User struct {

@@ -145,7 +145,30 @@ func (h *JobsHandler) RunNow(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, log)
+	responseLog := map[string]interface{}{
+		"id":     log.ID.String(),
+		"job_id": log.JobID.String(),
+		"status": log.Status,
+	}
+	if log.StartedAt.Valid {
+		responseLog["started_at"] = log.StartedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+	if log.FinishedAt.Valid {
+		responseLog["finished_at"] = log.FinishedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+	if log.DurationMs.Valid {
+		responseLog["duration_ms"] = log.DurationMs.Int32
+	}
+	if log.ResponseCode.Valid {
+		responseLog["response_code"] = log.ResponseCode.Int32
+	}
+	if log.Error.Valid {
+		responseLog["error"] = log.Error.String
+	}
+	if log.ResponseBody.Valid {
+		responseLog["response_body"] = log.ResponseBody.String
+	}
+	c.JSON(http.StatusOK, responseLog)
 }
 
 func (h *JobsHandler) ListLogs(c *gin.Context) {
@@ -188,6 +211,10 @@ func (h *JobsHandler) ListLogs(c *gin.Context) {
 
 		if log.Error.Valid {
 			responseLog["error"] = log.Error.String
+		}
+
+		if log.ResponseBody.Valid {
+			responseLog["response_body"] = log.ResponseBody.String
 		}
 
 		responseLogs[i] = responseLog

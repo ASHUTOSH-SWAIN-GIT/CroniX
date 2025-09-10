@@ -22,6 +22,7 @@ export interface JobLog {
   duration_ms: number | null;
   status: string;
   response_code: number | null;
+  response_body?: string | null;
   error: string | null;
 }
 
