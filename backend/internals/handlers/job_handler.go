@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"cronix.ashutosh.net/internals/services"
 	"github.com/gin-gonic/gin"
@@ -190,6 +194,76 @@ func (h *JobsHandler) ListLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, responseLogs)
+}
+
+// New: Server-side endpoint test to avoid CORS
+type testEndpointReq struct {
+	Endpoint string            `json:"endpoint" binding:"required"`
+	Method   string            `json:"method" binding:"required"`
+	Headers  map[string]string `json:"headers"`
+	Body     *string           `json:"body"`
+}
+
+func (h *JobsHandler) TestEndpoint(c *gin.Context) {
+	var req testEndpointReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Build request
+	var bodyReader io.Reader
+	if req.Body != nil {
+		bodyReader = bytes.NewBufferString(*req.Body)
+	}
+
+	httpReq, err := http.NewRequest(req.Method, req.Endpoint, bodyReader)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	for k, v := range req.Headers {
+		httpReq.Header.Set(k, v)
+	}
+	if httpReq.Header.Get("Content-Type") == "" {
+		httpReq.Header.Set("Content-Type", "application/json")
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	// Read body with a limit
+	const maxRead = 1 << 20 // 1MB
+	limited := io.LimitReader(resp.Body, maxRead)
+	respBytes, _ := io.ReadAll(limited)
+
+	// Try to parse JSON; if fails, return as string
+	var parsed interface{}
+	if len(respBytes) > 0 {
+		if json.Unmarshal(respBytes, &parsed) != nil {
+			parsed = string(respBytes)
+		}
+	}
+
+	// Collect headers (first value only for simplicity)
+	hdrs := map[string]string{}
+	for k, vals := range resp.Header {
+		if len(vals) > 0 {
+			hdrs[k] = vals[0]
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":      resp.StatusCode,
+		"status_text": resp.Status,
+		"headers":     hdrs,
+		"body":        parsed,
+	})
 }
 
 func getStrPtr(v interface{}) *string {

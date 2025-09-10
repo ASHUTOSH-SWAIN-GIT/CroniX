@@ -19,6 +19,7 @@ type Querier interface {
 	GetUser(ctx context.Context, id pgtype.UUID) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	InsertJobLog(ctx context.Context, arg InsertJobLogParams) (JobLog, error)
+	ListActiveJobs(ctx context.Context) ([]Job, error)
 	ListJobLogs(ctx context.Context, arg ListJobLogsParams) ([]JobLog, error)
 	ListJobsByUser(ctx context.Context, arg ListJobsByUserParams) ([]Job, error)
 	ListUsers(ctx context.Context) ([]User, error)

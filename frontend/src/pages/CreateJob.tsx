@@ -233,42 +233,22 @@ export default function CreateJob() {
         }
       }
 
-      // Prepare request options
-      const requestOptions: RequestInit = {
+      // Call backend to perform the test server-side (avoids CORS)
+      const result = await apiClient.testJobEndpoint({
+        endpoint: formData.endpoint,
         method: formData.method,
-        headers: {
-          "Content-Type": "application/json",
-          ...headers,
-        },
-      };
-
-      // Add body for POST/PUT/PATCH requests
-      if (
-        ["POST", "PUT", "PATCH"].includes(formData.method) &&
-        formData.body.trim()
-      ) {
-        requestOptions.body = formData.body;
-      }
-
-      // Make the test request
-      const response = await fetch(formData.endpoint, requestOptions);
-      const responseText = await response.text();
-
-      let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch {
-        responseData = responseText;
-      }
+        headers,
+        body: formData.body.trim() || undefined,
+      });
 
       setTestResult({
-        success: response.ok,
-        message: `Request completed with status ${response.status} ${response.statusText}`,
+        success: result.status >= 200 && result.status < 300,
+        message: `Request completed with status ${result.status} ${result.status_text}`,
         data: {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: responseData,
+          status: result.status,
+          statusText: result.status_text,
+          headers: result.headers,
+          body: result.body,
         },
       });
     } catch (error) {
@@ -501,7 +481,7 @@ export default function CreateJob() {
                       testResult.success ? "text-green-400" : "text-red-400"
                     }`}
                   >
-                    {testResult.success ? "✅ Success" : "❌ Failed"}
+                    {testResult.success ? "Success" : "Failed"}
                   </span>
                   <span className="text-sm text-neutral-400">
                     {testResult.message}

@@ -128,6 +128,44 @@ func (q *Queries) InsertJobLog(ctx context.Context, arg InsertJobLogParams) (Job
 	return i, err
 }
 
+const listActiveJobs = `-- name: ListActiveJobs :many
+SELECT id, user_id, name, schedule, endpoint, method, headers, body, active, created_at, updated_at FROM jobs 
+WHERE active = true 
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListActiveJobs(ctx context.Context) ([]Job, error) {
+	rows, err := q.db.Query(ctx, listActiveJobs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Job{}
+	for rows.Next() {
+		var i Job
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Schedule,
+			&i.Endpoint,
+			&i.Method,
+			&i.Headers,
+			&i.Body,
+			&i.Active,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listJobLogs = `-- name: ListJobLogs :many
 SELECT id, job_id, started_at, finished_at, duration_ms, status, response_code, error FROM job_logs
 WHERE job_id = $1

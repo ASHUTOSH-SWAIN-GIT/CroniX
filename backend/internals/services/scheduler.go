@@ -4,87 +4,70 @@ import (
 	"context"
 	"log"
 
+	"time"
+
 	"cronix.ashutosh.net/internals/db"
 	"github.com/robfig/cron/v3"
 )
 
 type Scheduler struct {
-	c          *cron.Cron
-	js         *JobsService
-	jobEntries map[string]cron.EntryID // Track job entries by job ID
+	c   *cron.Cron
+	js  *JobsService
+	ids map[string]cron.EntryID
 }
 
 func NewScheduler(js *JobsService) *Scheduler {
 	return &Scheduler{
-		c:          cron.New(cron.WithSeconds()),
-		js:         js,
-		jobEntries: make(map[string]cron.EntryID),
+		c:   cron.New(cron.WithSeconds()),
+		js:  js,
+		ids: make(map[string]cron.EntryID),
 	}
 }
-
-func (s *Scheduler) Start(ctx context.Context, activeJobs []db.Job) error {
-	for _, j := range activeJobs {
-		job := j
-		// Only schedule active jobs
-		if job.Active {
-			_, err := s.c.AddFunc(job.Schedule, func() {
-				log.Printf("Running job: %s", job.Name)
-				_, err := s.js.RunOnce(context.Background(), job)
-				if err != nil {
-					log.Printf("Job %s failed: %v", job.Name, err)
-				} else {
-					log.Printf("Job %s completed successfully", job.Name)
-				}
-			})
-			if err != nil {
-				log.Printf("Failed to schedule job %s: %v", job.Name, err)
-			} else {
-				log.Printf("Scheduled job: %s with schedule: %s", job.Name, job.Schedule)
-			}
+func (s *Scheduler) Start(ctx context.Context, jobs []db.Job) error {
+	for _, j := range jobs {
+		if j.Active {
+			_ = s.AddJob(j)
 		}
+
 	}
 	s.c.Start()
 	return nil
 }
 
-func (s *Scheduler) Stop() {
-	s.c.Stop()
-}
+func (s *Scheduler) Stop() { s.c.Stop() }
 
-// AddJob adds a job to the scheduler
 func (s *Scheduler) AddJob(job db.Job) error {
-	if !job.Active {
-		return nil // Don't schedule inactive jobs
+	// If job already scheduled, remove and replace
+	if entry, ok := s.ids[job.ID.String()]; ok {
+		s.c.Remove(entry)
+		delete(s.ids, job.ID.String())
 	}
 
-	// Remove existing job if it exists
-	s.RemoveJob(job.ID.String())
-
-	entryID, err := s.c.AddFunc(job.Schedule, func() {
-		log.Printf("Running job: %s", job.Name)
-		_, err := s.js.RunOnce(context.Background(), job)
-		if err != nil {
-			log.Printf("Job %s failed: %v", job.Name, err)
-		} else {
-			log.Printf("Job %s completed successfully", job.Name)
-		}
+	// Register the cron task; run each fire in its own goroutine with timeout
+	id, err := s.c.AddFunc(job.Schedule, func() {
+		go func(j db.Job) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("panic in job %s: %v", j.ID.String(), r)
+				}
+			}()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if _, err := s.js.RunOnce(ctx, j); err != nil {
+				log.Printf("run job %s error: %v", j.ID.String(), err)
+			}
+		}(job)
 	})
-
 	if err != nil {
-		log.Printf("Failed to schedule job %s: %v", job.Name, err)
 		return err
 	}
-
-	s.jobEntries[job.ID.String()] = entryID
-	log.Printf("Scheduled job: %s with schedule: %s", job.Name, job.Schedule)
+	s.ids[job.ID.String()] = id
 	return nil
 }
 
-// RemoveJob removes a job from the scheduler
 func (s *Scheduler) RemoveJob(jobID string) {
-	if entryID, exists := s.jobEntries[jobID]; exists {
-		s.c.Remove(entryID)
-		delete(s.jobEntries, jobID)
-		log.Printf("Removed job from scheduler: %s", jobID)
+	if entry, ok := s.ids[jobID]; ok {
+		s.c.Remove(entry)
+		delete(s.ids, jobID)
 	}
 }

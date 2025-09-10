@@ -77,17 +77,15 @@ func main() {
 	scheduler := services.NewScheduler(jobsService)
 	jobsHandler := handlers.NewJobsHandler(jobsService, scheduler)
 
-	// Initialize and start the scheduler
-
-	// For now, let's start with an empty scheduler and add jobs dynamically
-	// We'll add a method to refresh the scheduler when jobs are created/updated
-	activeJobs := []db.Job{} // Start empty
-
-	// Start the scheduler with active jobs
+	// After creating queries, jobsService, scheduler
+	activeJobs, err := queries.ListActiveJobs(context.Background())
+	if err != nil {
+		log.Printf("failed to load active jobs: %v", err)
+	}
 	if err := scheduler.Start(context.Background(), activeJobs); err != nil {
-		log.Printf("Failed to start scheduler: %v", err)
+		log.Printf("failed to start scheduler: %v", err)
 	} else {
-		log.Printf("Scheduler started with %d active jobs", len(activeJobs))
+		log.Printf("scheduler started with %d active jobs", len(activeJobs))
 	}
 
 	authHandler := handlers.NewAuthHandler(authService, authConfig)
@@ -151,6 +149,7 @@ func main() {
 		api.DELETE("/jobs/:id", jobsHandler.Delete)
 		api.POST("/jobs/:id/run", jobsHandler.RunNow)
 		api.GET("/jobs/:id/logs", jobsHandler.ListLogs)
+		api.POST("/jobs/test", jobsHandler.TestEndpoint)
 	}
 
 	port := os.Getenv("PORT")

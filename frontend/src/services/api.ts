@@ -96,6 +96,19 @@ class ApiClient {
     return this.request<JobLog[]>(`/jobs/${id}/logs?${params}`);
   }
 
+  // Test job endpoint server-side to avoid CORS
+  async testJobEndpoint(payload: {
+    endpoint: string;
+    method: string;
+    headers?: Record<string, string>;
+    body?: string;
+  }): Promise<{ status: number; status_text: string; headers: Record<string, string>; body: any; }> {
+    return this.request(`/jobs/test`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   // Auth API
   async getProfile(): Promise<any> {
     return this.request<any>('/profile');

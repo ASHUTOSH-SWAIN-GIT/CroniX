@@ -39,3 +39,8 @@ SELECT * FROM job_logs
 WHERE job_id = $1
 ORDER BY started_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: ListActiveJobs :many
+SELECT * FROM jobs 
+WHERE active = true 
+ORDER BY created_at DESC;

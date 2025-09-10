@@ -64,26 +64,31 @@ func (s *JobsService) RunOnce(ctx context.Context, job db.Job) (db.JobLog, error
 
 	var errStr string
 
+	hasResp := false
 	reqBody := []byte(nil)
 	if job.Body.Valid {
 		reqBody = []byte(job.Body.String)
 	}
-	req, _ := http.NewRequest(job.Method, job.Endpoint, bytes.NewReader(reqBody))
-
-	if len(job.Headers) > 0 {
-		var hdr map[string]string
-		_ = json.Unmarshal(job.Headers, &hdr)
-		for k, v := range hdr {
-			req.Header.Set(k, v)
+	req, newReqErr := http.NewRequest(job.Method, job.Endpoint, bytes.NewReader(reqBody))
+	if newReqErr != nil {
+		status, errStr = "failure", newReqErr.Error()
+	} else {
+		if len(job.Headers) > 0 {
+			var hdr map[string]string
+			_ = json.Unmarshal(job.Headers, &hdr)
+			for k, v := range hdr {
+				req.Header.Set(k, v)
+			}
 		}
-	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		status, errStr = "failure", err.Error()
-	}
-	if resp != nil {
-		code = resp.StatusCode
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			status, errStr = "failure", err.Error()
+		}
+		if resp != nil {
+			code = resp.StatusCode
+			hasResp = true
+		}
 	}
 
 	dur := int32(time.Since(start).Milliseconds())
@@ -93,7 +98,7 @@ func (s *JobsService) RunOnce(ctx context.Context, job db.Job) (db.JobLog, error
 		FinishedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
 		DurationMs:   pgtype.Int4{Int32: dur, Valid: true},
 		Status:       status,
-		ResponseCode: pgtype.Int4{Int32: int32(code), Valid: resp != nil},
+		ResponseCode: pgtype.Int4{Int32: int32(code), Valid: hasResp},
 		Error:        pgtype.Text{String: errStr, Valid: errStr != ""},
 	})
 }
