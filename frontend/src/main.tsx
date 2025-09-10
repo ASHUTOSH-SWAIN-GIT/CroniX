@@ -21,7 +21,7 @@ createRoot(document.getElementById("root")!).render(
           <Route index element={<Dashboard />} />
           <Route path="jobs" element={<Jobs />} />
           <Route path="jobs/create" element={<CreateJob />} />
-          <Route path="logs" element={<Logs />} />
+          <Route path="jobs/:id/logs" element={<Logs />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

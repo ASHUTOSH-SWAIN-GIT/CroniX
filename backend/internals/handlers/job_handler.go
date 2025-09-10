@@ -11,10 +11,13 @@ import (
 )
 
 type JobsHandler struct {
-	js *services.JobsService
+	js        *services.JobsService
+	scheduler *services.Scheduler
 }
 
-func NewJobsHandler(js *services.JobsService) *JobsHandler { return &JobsHandler{js: js} }
+func NewJobsHandler(js *services.JobsService, scheduler *services.Scheduler) *JobsHandler {
+	return &JobsHandler{js: js, scheduler: scheduler}
+}
 
 type createJobReq struct {
 	Name     string            `json:"name" binding:"required"`
@@ -42,6 +45,15 @@ func (h *JobsHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Add job to scheduler if it's active
+	if job.Active {
+		if err := h.scheduler.AddJob(job); err != nil {
+			// Log error but don't fail the request
+			// The job is created in DB, just not scheduled
+		}
+	}
+
 	c.JSON(http.StatusCreated, job)
 }
 
@@ -89,12 +101,26 @@ func (h *JobsHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Update scheduler
+	if job.Active {
+		if err := h.scheduler.AddJob(job); err != nil {
+			// Log error but don't fail the request
+		}
+	} else {
+		h.scheduler.RemoveJob(job.ID.String())
+	}
+
 	c.JSON(http.StatusOK, job)
 }
 
 func (h *JobsHandler) Delete(c *gin.Context) {
 	var id pgtype.UUID
 	_ = id.Scan(c.Param("id"))
+
+	// Remove from scheduler first
+	h.scheduler.RemoveJob(id.String())
+
 	if err := h.js.Delete(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -116,6 +142,54 @@ func (h *JobsHandler) RunNow(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, log)
+}
+
+func (h *JobsHandler) ListLogs(c *gin.Context) {
+	var id pgtype.UUID
+	_ = id.Scan(c.Param("id"))
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	logs, err := h.js.ListLogs(c.Request.Context(), id, int32(limit), int32(offset))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Convert pgtype structs to simple JSON-compatible structs
+	responseLogs := make([]map[string]interface{}, len(logs))
+	for i, log := range logs {
+		responseLog := map[string]interface{}{
+			"id":     log.ID.String(),
+			"job_id": log.JobID.String(),
+			"status": log.Status,
+		}
+
+		if log.StartedAt.Valid {
+			responseLog["started_at"] = log.StartedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+		}
+
+		if log.FinishedAt.Valid {
+			responseLog["finished_at"] = log.FinishedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+		}
+
+		if log.DurationMs.Valid {
+			responseLog["duration_ms"] = log.DurationMs.Int32
+		}
+
+		if log.ResponseCode.Valid {
+			responseLog["response_code"] = log.ResponseCode.Int32
+		}
+
+		if log.Error.Valid {
+			responseLog["error"] = log.Error.String
+		}
+
+		responseLogs[i] = responseLog
+	}
+
+	c.JSON(http.StatusOK, responseLogs)
 }
 
 func getStrPtr(v interface{}) *string {

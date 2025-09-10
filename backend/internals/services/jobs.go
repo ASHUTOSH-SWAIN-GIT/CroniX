@@ -98,6 +98,14 @@ func (s *JobsService) RunOnce(ctx context.Context, job db.Job) (db.JobLog, error
 	})
 }
 
+func (s *JobsService) ListLogs(ctx context.Context, jobID pgtype.UUID, limit, offset int32) ([]db.JobLog, error) {
+	return s.q.ListJobLogs(ctx, db.ListJobLogsParams{
+		JobID:  jobID,
+		Limit:  limit,
+		Offset: offset,
+	})
+}
+
 func toTextPtr(s *string) pgtype.Text {
 	if s == nil {
 		return pgtype.Text{}

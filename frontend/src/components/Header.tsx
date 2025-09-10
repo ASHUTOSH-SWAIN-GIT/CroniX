@@ -7,7 +7,6 @@ const Header = () => {
   const navLinks = [
     { path: "/dashboard", label: "Dashboard" },
     { path: "/dashboard/jobs", label: "Jobs" },
-    { path: "/dashboard/logs", label: "Logs" },
     { path: "/dashboard/settings", label: "Settings" },
   ];
 
