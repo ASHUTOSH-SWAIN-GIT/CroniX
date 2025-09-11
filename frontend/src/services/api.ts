@@ -1,4 +1,5 @@
 import type { Job, JobLog, CreateJobRequest, UpdateJobRequest } from '../types/api.js';
+import { cache, CACHE_TYPES } from '../utils/cache.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -16,7 +17,7 @@ class ApiClient {
     const url = `${this.baseURL}${endpoint}`;
     
     const config: RequestInit = {
-      credentials: 'include', // Include cookies for authentication
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -38,7 +39,6 @@ class ApiClient {
         throw new Error(errorMessage);
       }
 
-      // Handle 204 No Content responses
       if (response.status === 204) {
         return {} as T;
       }
@@ -52,48 +52,110 @@ class ApiClient {
     }
   }
 
-  // Jobs API
+  // Jobs API with caching
   async createJob(jobData: CreateJobRequest): Promise<Job> {
-    return this.request<Job>('/jobs', {
+    const result = await this.request<Job>('/jobs', {
       method: 'POST',
       body: JSON.stringify(jobData),
     });
+    
+    // Invalidate jobs list cache
+    cache.invalidate(CACHE_TYPES.JOBS_LIST);
+    
+    return result;
   }
 
   async getJobs(limit = 20, offset = 0): Promise<Job[]> {
+    // Check cache first
+    const cacheKey = `${limit}-${offset}`;
+    const cached = cache.get<Job[]>(CACHE_TYPES.JOBS_LIST, cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from API
     const params = new URLSearchParams({
       limit: limit.toString(),
       offset: offset.toString(),
     });
-    return this.request<Job[]>(`/jobs?${params}`);
+    const result = await this.request<Job[]>(`/jobs?${params}`);
+    
+    // Cache the result
+    cache.set(CACHE_TYPES.JOBS_LIST, result, cacheKey);
+    
+    return result;
   }
 
   async getJob(id: string): Promise<Job> {
-    return this.request<Job>(`/jobs/${id}`);
+    // Check cache first
+    const cached = cache.get<Job>(CACHE_TYPES.JOB_DETAILS, id);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from API
+    const result = await this.request<Job>(`/jobs/${id}`);
+    
+    // Cache the result
+    cache.set(CACHE_TYPES.JOB_DETAILS, result, id);
+    
+    return result;
   }
 
   async updateJob(id: string, jobData: UpdateJobRequest): Promise<Job> {
-    return this.request<Job>(`/jobs/${id}`, {
+    const result = await this.request<Job>(`/jobs/${id}`, {
       method: 'PUT',
       body: JSON.stringify(jobData),
     });
+    
+    // Invalidate related caches
+    cache.invalidate(CACHE_TYPES.JOBS_LIST);
+    cache.invalidate(CACHE_TYPES.JOB_DETAILS, id);
+    
+    return result;
   }
 
   async deleteJob(id: string): Promise<void> {
-    return this.request<void>(`/jobs/${id}`, {
+    await this.request<void>(`/jobs/${id}`, {
       method: 'DELETE',
     });
+    
+    // Invalidate related caches
+    cache.invalidate(CACHE_TYPES.JOBS_LIST);
+    cache.invalidate(CACHE_TYPES.JOB_DETAILS, id);
+    cache.invalidate(CACHE_TYPES.JOB_LOGS, id);
   }
 
   async runJob(id: string): Promise<JobLog> {
-    return this.request<JobLog>(`/jobs/${id}/run`, {
+    const result = await this.request<JobLog>(`/jobs/${id}/run`, {
       method: 'POST',
     });
+    
+    // Invalidate job logs cache
+    cache.invalidate(CACHE_TYPES.JOB_LOGS, id);
+    
+    return result;
   }
 
   async getJobLogs(id: string, limit = 50, offset = 0): Promise<JobLog[]> {
-    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-    return this.request<JobLog[]>(`/jobs/${id}/logs?${params}`);
+    // Check cache first
+    const cacheKey = `${id}-${limit}-${offset}`;
+    const cached = cache.get<JobLog[]>(CACHE_TYPES.JOB_LOGS, cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from API
+    const params = new URLSearchParams({ 
+      limit: String(limit), 
+      offset: String(offset) 
+    });
+    const result = await this.request<JobLog[]>(`/jobs/${id}/logs?${params}`);
+    
+    // Cache the result
+    cache.set(CACHE_TYPES.JOB_LOGS, result, cacheKey);
+    
+    return result;
   }
 
   // Test job endpoint server-side to avoid CORS
@@ -109,14 +171,51 @@ class ApiClient {
     });
   }
 
-  // Auth API
+  // Auth API with caching
   async getProfile(): Promise<any> {
-    return this.request<any>('/profile');
+    // Check cache first
+    const cached = cache.get<any>(CACHE_TYPES.USER_PROFILE);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch from API
+    const result = await this.request<any>('/profile');
+    
+    // Cache the result
+    cache.set(CACHE_TYPES.USER_PROFILE, result);
+    
+    return result;
   }
 
   // Test API (no auth required)
   async testConnection(): Promise<any> {
     return this.request<any>('/test');
+  }
+
+  // Logout (no auth required)
+  async logout(): Promise<void> {
+    // Use direct fetch since this endpoint is outside the /api group
+    const response = await fetch(`${this.baseURL.replace('/api', '')}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Logout failed: ${response.status} ${response.statusText}`);
+    }
+  }
+
+  // Cache management methods
+  clearCache(): void {
+    cache.clear();
+  }
+
+  invalidateCache(type: string, identifier?: string): void {
+    cache.invalidate(type, identifier);
   }
 }
 
