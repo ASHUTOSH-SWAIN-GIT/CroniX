@@ -150,6 +150,7 @@ func main() {
 		api.POST("/jobs/:id/run", jobsHandler.RunNow)
 		api.GET("/jobs/:id/logs", jobsHandler.ListLogs)
 		api.POST("/jobs/test", jobsHandler.TestEndpoint)
+		api.POST("/jobs/cleanup-logs", jobsHandler.CleanupAllLogs)
 	}
 
 	port := os.Getenv("PORT")

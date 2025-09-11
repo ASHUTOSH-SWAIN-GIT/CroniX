@@ -175,10 +175,8 @@ func (h *JobsHandler) ListLogs(c *gin.Context) {
 	var id pgtype.UUID
 	_ = id.Scan(c.Param("id"))
 
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-
-	logs, err := h.js.ListLogs(c.Request.Context(), id, int32(limit), int32(offset))
+	// Always return only the 5 most recent logs
+	logs, err := h.js.ListRecentLogs(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -221,6 +219,16 @@ func (h *JobsHandler) ListLogs(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, responseLogs)
+}
+
+func (h *JobsHandler) CleanupAllLogs(c *gin.Context) {
+	err := h.js.CleanupAllOldLogs(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "All old logs cleaned up successfully"})
 }
 
 // New: Server-side endpoint test to avoid CORS

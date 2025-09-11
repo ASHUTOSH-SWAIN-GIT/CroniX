@@ -116,12 +116,39 @@ class CacheManager {
     }
   }
 
+  // Clear all cache entries for a specific job
+  clearJobCache(jobId: string): void {
+    // Clear memory cache
+    const keysToDelete: string[] = [];
+    this.memoryCache.forEach((_, key) => {
+      if (key.includes(jobId)) {
+        keysToDelete.push(key);
+      }
+    });
+    
+    keysToDelete.forEach(key => {
+      this.memoryCache.delete(key);
+    });
+    
+    // Clear localStorage
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes(jobId)) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.warn('Failed to clear localStorage:', error);
+    }
+  }
+
   // Invalidate related cache items
   invalidate(type: string, identifier?: string): void {
     if (type === 'jobsList') {
-      // When jobs list changes, invalidate all job details
+      // When jobs list changes, invalidate all job list entries AND job details
       this.memoryCache.forEach((_, key) => {
-        if (key.startsWith('jobDetails:')) {
+        if (key.startsWith('jobsList:') || key.startsWith('jobDetails:')) {
           this.memoryCache.delete(key);
           try {
             localStorage.removeItem(key);
@@ -135,6 +162,29 @@ class CacheManager {
     if (type === 'jobDetails' && identifier) {
       // When job details change, invalidate related logs
       this.remove('jobLogs', identifier);
+    }
+
+    if (type === 'jobLogs' && identifier) {
+      // When job logs change, invalidate all paginated log entries for this job
+      // Clear memory cache
+      this.memoryCache.forEach((_, key) => {
+        // Match keys like "jobLogs:123-5-0", "jobLogs:123-5-5", etc.
+        if (key.startsWith(`jobLogs:${identifier}-`)) {
+          this.memoryCache.delete(key);
+        }
+      });
+      
+      // Clear localStorage cache
+      try {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith(`jobLogs:${identifier}-`)) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (error) {
+        console.warn('Failed to clear localStorage for job logs:', error);
+      }
     }
 
     // Remove the specific item

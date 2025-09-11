@@ -11,9 +11,11 @@ import (
 )
 
 type Querier interface {
+	CleanupAllOldLogs(ctx context.Context) error
 	CreateJob(ctx context.Context, arg CreateJobParams) (Job, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteJob(ctx context.Context, id pgtype.UUID) error
+	DeleteOldJobLogs(ctx context.Context, jobID pgtype.UUID) error
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	GetJob(ctx context.Context, id pgtype.UUID) (Job, error)
 	GetUser(ctx context.Context, id pgtype.UUID) (User, error)
@@ -22,6 +24,7 @@ type Querier interface {
 	ListActiveJobs(ctx context.Context) ([]Job, error)
 	ListJobLogs(ctx context.Context, arg ListJobLogsParams) ([]JobLog, error)
 	ListJobsByUser(ctx context.Context, arg ListJobsByUserParams) ([]Job, error)
+	ListRecentJobLogs(ctx context.Context, jobID pgtype.UUID) ([]JobLog, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	UpdateJob(ctx context.Context, arg UpdateJobParams) (Job, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)

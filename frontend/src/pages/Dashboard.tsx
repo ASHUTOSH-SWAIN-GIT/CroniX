@@ -103,7 +103,7 @@ export default function Dashboard() {
           for (const job of jobsData.slice(0, 5)) {
             // Get logs for first 5 jobs
             try {
-              const logs = await apiClient.getJobLogs(job.id, 4, 0); // 4 logs per job
+              const logs = await apiClient.getJobLogs(job.id); // Gets 5 most recent logs
               allLogs.push(...logs);
             } catch (err) {
               console.warn(`Failed to fetch logs for job ${job.id}:`, err);

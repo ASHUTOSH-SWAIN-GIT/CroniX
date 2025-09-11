@@ -11,6 +11,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cleanupAllOldLogs = `-- name: CleanupAllOldLogs :exec
+DELETE FROM job_logs
+WHERE id NOT IN (
+    SELECT id
+    FROM (
+        SELECT id,
+               ROW_NUMBER() OVER (PARTITION BY job_id ORDER BY started_at DESC) as rn
+        FROM job_logs
+    ) ranked
+    WHERE rn <= 5
+)
+`
+
+func (q *Queries) CleanupAllOldLogs(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, cleanupAllOldLogs)
+	return err
+}
+
 const createJob = `-- name: CreateJob :one
 INSERT INTO jobs (user_id, name, schedule, endpoint, method, headers, body, active)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -62,6 +80,23 @@ DELETE FROM jobs WHERE id = $1
 
 func (q *Queries) DeleteJob(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteJob, id)
+	return err
+}
+
+const deleteOldJobLogs = `-- name: DeleteOldJobLogs :exec
+DELETE FROM job_logs AS outer_logs
+WHERE outer_logs.job_id = $1
+AND outer_logs.started_at < (
+    SELECT inner_logs.started_at
+    FROM job_logs AS inner_logs
+    WHERE inner_logs.job_id = $1
+    ORDER BY inner_logs.started_at DESC
+    LIMIT 1 OFFSET 4
+)
+`
+
+func (q *Queries) DeleteOldJobLogs(ctx context.Context, jobID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteOldJobLogs, jobID)
 	return err
 }
 
@@ -258,6 +293,44 @@ func (q *Queries) ListJobsByUser(ctx context.Context, arg ListJobsByUserParams) 
 	return items, nil
 }
 
+const listRecentJobLogs = `-- name: ListRecentJobLogs :many
+SELECT id, job_id, started_at, finished_at, duration_ms, status, response_code, error, response_body
+FROM job_logs
+WHERE job_id = $1
+ORDER BY started_at DESC
+LIMIT 5
+`
+
+func (q *Queries) ListRecentJobLogs(ctx context.Context, jobID pgtype.UUID) ([]JobLog, error) {
+	rows, err := q.db.Query(ctx, listRecentJobLogs, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []JobLog{}
+	for rows.Next() {
+		var i JobLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.JobID,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.DurationMs,
+			&i.Status,
+			&i.ResponseCode,
+			&i.Error,
+			&i.ResponseBody,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateJob = `-- name: UpdateJob :one
 UPDATE jobs
 SET
@@ -274,23 +347,23 @@ RETURNING id, user_id, name, schedule, endpoint, method, headers, body, active, 
 `
 
 type UpdateJobParams struct {
-	ID       pgtype.UUID `json:"id"`
-	Name     string      `json:"name"`
-	Schedule string      `json:"schedule"`
-	Endpoint string      `json:"endpoint"`
-	Method   string      `json:"method"`
-	Headers  []byte      `json:"headers"`
-	Body     pgtype.Text `json:"body"`
-	Active   bool        `json:"active"`
+	ID      pgtype.UUID `json:"id"`
+	Column2 interface{} `json:"column_2"`
+	Column3 interface{} `json:"column_3"`
+	Column4 interface{} `json:"column_4"`
+	Column5 interface{} `json:"column_5"`
+	Headers []byte      `json:"headers"`
+	Body    pgtype.Text `json:"body"`
+	Active  bool        `json:"active"`
 }
 
 func (q *Queries) UpdateJob(ctx context.Context, arg UpdateJobParams) (Job, error) {
 	row := q.db.QueryRow(ctx, updateJob,
 		arg.ID,
-		arg.Name,
-		arg.Schedule,
-		arg.Endpoint,
-		arg.Method,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
 		arg.Headers,
 		arg.Body,
 		arg.Active,

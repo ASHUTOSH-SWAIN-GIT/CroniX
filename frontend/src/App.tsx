@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import UserBadge from "./components/UserBadge";
 import { apiClient } from "./services/api";
 
 // Monochrome inline SVG icons
@@ -198,9 +197,6 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-white">
-      <div className="fixed top-4 right-4 z-50">
-        <UserBadge />
-      </div>
       {/* Hero Section */}
       <section className="flex-1 flex items-center justify-center px-8 pt-8 pb-4 min-h-[70vh] bg-black">
         <div className="text-center max-w-3xl mx-auto">

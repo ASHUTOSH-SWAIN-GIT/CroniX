@@ -9,7 +9,7 @@ import Dashboard from "./pages/Dashboard.tsx";
 import Jobs from "./pages/Jobs.tsx";
 import CreateJob from "./pages/CreateJob.tsx";
 import Logs from "./pages/Logs.tsx";
-import Settings from "./pages/Settings.tsx";
+import Profile from "./pages/Profile.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -21,8 +21,9 @@ createRoot(document.getElementById("root")!).render(
           <Route index element={<Dashboard />} />
           <Route path="jobs" element={<Jobs />} />
           <Route path="jobs/create" element={<CreateJob />} />
+          <Route path="jobs/edit/:id" element={<CreateJob />} />
           <Route path="jobs/:id/logs" element={<Logs />} />
-          <Route path="settings" element={<Settings />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>
     </BrowserRouter>

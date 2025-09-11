@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom";
-import UserBadge from "./UserBadge";
 
 const Header = () => {
   const location = useLocation();
@@ -7,7 +6,7 @@ const Header = () => {
   const navLinks = [
     { path: "/dashboard", label: "Dashboard" },
     { path: "/dashboard/jobs", label: "Jobs" },
-    { path: "/dashboard/settings", label: "Settings" },
+    { path: "/dashboard/profile", label: "Profile" },
   ];
 
   const isActive = (path: string) => {
@@ -45,11 +44,6 @@ const Header = () => {
               </Link>
             ))}
           </nav>
-
-          {/* User Badge */}
-          <div className="flex items-center">
-            <UserBadge />
-          </div>
         </div>
       </div>
     </header>

@@ -60,6 +60,7 @@ class ApiClient {
     });
     
     // Invalidate jobs list cache
+    console.log('Creating job, invalidating jobs list cache');
     cache.invalidate(CACHE_TYPES.JOBS_LIST);
     
     return result;
@@ -70,9 +71,11 @@ class ApiClient {
     const cacheKey = `${limit}-${offset}`;
     const cached = cache.get<Job[]>(CACHE_TYPES.JOBS_LIST, cacheKey);
     if (cached) {
+      console.log(`Jobs cache hit for key: ${cacheKey}`);
       return cached;
     }
 
+    console.log(`Jobs cache miss for key: ${cacheKey}, fetching from API`);
     // Fetch from API
     const params = new URLSearchParams({
       limit: limit.toString(),
@@ -82,6 +85,7 @@ class ApiClient {
     
     // Cache the result
     cache.set(CACHE_TYPES.JOBS_LIST, result, cacheKey);
+    console.log(`Cached jobs for key: ${cacheKey}`);
     
     return result;
   }
@@ -137,23 +141,18 @@ class ApiClient {
     return result;
   }
 
-  async getJobLogs(id: string, limit = 50, offset = 0): Promise<JobLog[]> {
+  async getJobLogs(id: string): Promise<JobLog[]> {
     // Check cache first
-    const cacheKey = `${id}-${limit}-${offset}`;
-    const cached = cache.get<JobLog[]>(CACHE_TYPES.JOB_LOGS, cacheKey);
+    const cached = cache.get<JobLog[]>(CACHE_TYPES.JOB_LOGS, id);
     if (cached) {
       return cached;
     }
 
-    // Fetch from API
-    const params = new URLSearchParams({ 
-      limit: String(limit), 
-      offset: String(offset) 
-    });
-    const result = await this.request<JobLog[]>(`/jobs/${id}/logs?${params}`);
+    // Fetch from API - always returns the 5 most recent logs
+    const result = await this.request<JobLog[]>(`/jobs/${id}/logs`);
     
     // Cache the result
-    cache.set(CACHE_TYPES.JOB_LOGS, result, cacheKey);
+    cache.set(CACHE_TYPES.JOB_LOGS, result, id);
     
     return result;
   }
@@ -216,6 +215,16 @@ class ApiClient {
 
   invalidateCache(type: string, identifier?: string): void {
     cache.invalidate(type, identifier);
+  }
+
+  clearJobCache(jobId: string): void {
+    cache.clearJobCache(jobId);
+  }
+
+  async cleanupAllLogs(): Promise<void> {
+    await this.request('/jobs/cleanup-logs', {
+      method: 'POST',
+    });
   }
 }
 

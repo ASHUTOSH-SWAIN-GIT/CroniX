@@ -406,6 +406,9 @@ export default function Jobs() {
                       </button>
 
                       <button
+                        onClick={() =>
+                          navigate(`/dashboard/jobs/edit/${job.id}`)
+                        }
                         className="p-2.5 rounded-lg bg-neutral-800 text-neutral-300 hover:bg-neutral-700 transition-colors"
                         title="Edit job"
                       >

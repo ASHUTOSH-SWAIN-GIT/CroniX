@@ -39,14 +39,14 @@ func (s *JobsService) Update(ctx context.Context, id pgtype.UUID, name, schedule
 	}
 
 	return s.q.UpdateJob(ctx, db.UpdateJobParams{
-		ID:       id,
-		Name:     getStr(name),
-		Schedule: getStr(schedule),
-		Endpoint: getStr(endpoint),
-		Method:   getStr(method),
-		Headers:  hdr,
-		Body:     toTextPtr(body),
-		Active:   getBool(active),
+		ID:      id,
+		Column2: getStr(name),     // name
+		Column3: getStr(schedule), // schedule
+		Column4: getStr(endpoint), // endpoint
+		Column5: getStr(method),   // method
+		Headers: hdr,
+		Body:    toTextPtr(body),
+		Active:  getBool(active),
 	})
 }
 
@@ -101,7 +101,7 @@ func (s *JobsService) RunOnce(ctx context.Context, job db.Job) (db.JobLog, error
 	}
 
 	dur := int32(time.Since(start).Milliseconds())
-	return s.q.InsertJobLog(ctx, db.InsertJobLogParams{
+	newLog, err := s.q.InsertJobLog(ctx, db.InsertJobLogParams{
 		JobID:        job.ID,
 		StartedAt:    pgtype.Timestamptz{Time: start, Valid: true},
 		FinishedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
@@ -111,6 +111,16 @@ func (s *JobsService) RunOnce(ctx context.Context, job db.Job) (db.JobLog, error
 		Error:        pgtype.Text{String: errStr, Valid: errStr != ""},
 		ResponseBody: pgtype.Text{String: respBodyStr, Valid: respBodyStr != ""},
 	})
+
+	if err != nil {
+		return newLog, err
+	}
+
+	// Clean up old logs, keeping only the 5 most recent
+	// We ignore errors here as cleanup is not critical
+	_ = s.CleanupOldLogs(ctx, job.ID)
+
+	return newLog, nil
 }
 
 func (s *JobsService) ListLogs(ctx context.Context, jobID pgtype.UUID, limit, offset int32) ([]db.JobLog, error) {
@@ -119,6 +129,18 @@ func (s *JobsService) ListLogs(ctx context.Context, jobID pgtype.UUID, limit, of
 		Limit:  limit,
 		Offset: offset,
 	})
+}
+
+func (s *JobsService) ListRecentLogs(ctx context.Context, jobID pgtype.UUID) ([]db.JobLog, error) {
+	return s.q.ListRecentJobLogs(ctx, jobID)
+}
+
+func (s *JobsService) CleanupOldLogs(ctx context.Context, jobID pgtype.UUID) error {
+	return s.q.DeleteOldJobLogs(ctx, jobID)
+}
+
+func (s *JobsService) CleanupAllOldLogs(ctx context.Context) error {
+	return s.q.CleanupAllOldLogs(ctx)
 }
 
 func toTextPtr(s *string) pgtype.Text {

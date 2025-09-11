@@ -345,9 +345,7 @@ export default function Logs() {
   const [running, setRunning] = useState(false);
   const [selectedLog, setSelectedLog] = useState<JobLog | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const logsPerPage = 5;
+  const [justExecuted, setJustExecuted] = useState(false);
 
   // Fetch job details
   useEffect(() => {
@@ -369,24 +367,14 @@ export default function Logs() {
     fetchJob();
   }, [id]);
 
-  // Fetch logs
-  const fetchLogs = async (page: number = currentPage) => {
+  // Fetch logs (always returns the 5 most recent)
+  const fetchLogs = async () => {
     if (!id) return;
 
     setLogsLoading(true);
     try {
-      const offset = (page - 1) * logsPerPage;
-      const logsData = await apiClient.getJobLogs(id, logsPerPage, offset);
+      const logsData = await apiClient.getJobLogs(id);
       setLogs(logsData);
-
-      // Calculate total pages (we'll need to get total count from API or estimate)
-      // For now, we'll assume there are more logs if we get a full page
-      if (logsData.length === logsPerPage) {
-        setTotalPages(page + 1); // Assume there's at least one more page
-      } else {
-        setTotalPages(page);
-      }
-
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch logs");
@@ -398,33 +386,46 @@ export default function Logs() {
   // Fetch logs on mount and set up auto-refresh
   useEffect(() => {
     if (id) {
-      fetchLogs(1); // Start with page 1
-      const interval = setInterval(() => fetchLogs(currentPage), 10000); // Refresh every 10 seconds
+      // Clear all cache for this job to ensure fresh data
+      apiClient.clearJobCache(id);
+
+      fetchLogs(); // Fetch the 5 most recent logs
+      const interval = setInterval(() => {
+        fetchLogs(); // Auto-refresh every 10 seconds
+      }, 10000);
       return () => clearInterval(interval);
     }
   }, [id]);
 
-  // Fetch logs when page changes
+  // Auto-refresh when page loads (useful when navigating from Jobs page after Run Now)
   useEffect(() => {
-    if (id && currentPage > 1) {
-      fetchLogs(currentPage);
+    if (id) {
+      // Refresh logs after a short delay to ensure the job has completed
+      const timeout = setTimeout(() => {
+        fetchLogs();
+      }, 1500);
+      return () => clearTimeout(timeout);
     }
-  }, [currentPage]);
+  }, [id]);
 
   // Run job manually
   const runJob = async () => {
     if (!id) return;
 
     setRunning(true);
+    setJustExecuted(true);
     try {
       await apiClient.runJob(id);
-      // Refresh logs after running and go to first page to see the new log
+      // Clear cache and refresh logs immediately
+      apiClient.clearJobCache(id);
+      // Wait a moment for the job to complete, then fetch logs
       setTimeout(() => {
-        setCurrentPage(1);
-        fetchLogs(1);
-      }, 1000);
+        fetchLogs();
+        setJustExecuted(false);
+      }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run job");
+      setJustExecuted(false);
     } finally {
       setRunning(false);
     }
@@ -440,25 +441,6 @@ export default function Logs() {
   const closeLogDialog = () => {
     setDialogOpen(false);
     setSelectedLog(null);
-  };
-
-  // Pagination functions
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const goToPrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -537,7 +519,7 @@ export default function Logs() {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => fetchLogs(currentPage)}
+              onClick={() => fetchLogs()}
               disabled={logsLoading}
               className="flex items-center space-x-2 px-4 py-2 bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 text-white rounded-lg transition-colors"
             >
@@ -597,11 +579,19 @@ export default function Logs() {
               <h2 className="text-xl font-semibold text-white">
                 Execution History
                 <span className="text-sm font-normal text-neutral-400 ml-2">
-                  (Page {currentPage} of {totalPages})
+                  (Recent Logs)
                 </span>
               </h2>
-              <div className="text-sm text-neutral-400">
-                Auto-refreshes every 10 seconds
+              <div className="flex items-center space-x-4">
+                {justExecuted && (
+                  <div className="flex items-center space-x-2 text-blue-400">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                    <span className="text-sm">Job executed, refreshing...</span>
+                  </div>
+                )}
+                <div className="text-sm text-neutral-400">
+                  Auto-refreshes every 10 seconds
+                </div>
               </div>
             </div>
           </div>
@@ -681,59 +671,11 @@ export default function Logs() {
               </div>
             )}
 
-            {/* Pagination Controls */}
-            {logs.length > 0 && totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
+            {/* Simple logs count */}
+            {logs.length > 0 && (
+              <div className="mt-6 text-center">
                 <div className="text-sm text-neutral-400">
-                  Showing {logs.length} logs on page {currentPage} of{" "}
-                  {totalPages}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={goToPrevPage}
-                    disabled={currentPage === 1}
-                    className="px-3 py-2 text-sm bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 disabled:bg-neutral-900 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Previous
-                  </button>
-
-                  {/* Page numbers */}
-                  <div className="flex items-center space-x-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => goToPage(pageNum)}
-                          className={`px-3 py-2 text-sm rounded-lg transition-colors ${
-                            currentPage === pageNum
-                              ? "bg-emerald-600 text-white"
-                              : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <button
-                    onClick={goToNextPage}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-2 text-sm bg-neutral-800 text-neutral-300 rounded-lg hover:bg-neutral-700 disabled:bg-neutral-900 disabled:text-neutral-600 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Next
-                  </button>
+                  Showing {logs.length} most recent logs
                 </div>
               </div>
             )}

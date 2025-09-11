@@ -42,7 +42,37 @@ WHERE job_id = $1
 ORDER BY started_at DESC
 LIMIT $2 OFFSET $3;
 
+-- name: ListRecentJobLogs :many
+SELECT *
+FROM job_logs
+WHERE job_id = $1
+ORDER BY started_at DESC
+LIMIT 5;
+
+-- name: DeleteOldJobLogs :exec
+DELETE FROM job_logs AS outer_logs
+WHERE outer_logs.job_id = $1
+AND outer_logs.started_at < (
+    SELECT inner_logs.started_at
+    FROM job_logs AS inner_logs
+    WHERE inner_logs.job_id = $1
+    ORDER BY inner_logs.started_at DESC
+    LIMIT 1 OFFSET 4
+);
+
 -- name: ListActiveJobs :many
 SELECT * FROM jobs 
 WHERE active = true 
 ORDER BY created_at DESC;
+
+-- name: CleanupAllOldLogs :exec
+DELETE FROM job_logs
+WHERE id NOT IN (
+    SELECT id
+    FROM (
+        SELECT id,
+               ROW_NUMBER() OVER (PARTITION BY job_id ORDER BY started_at DESC) as rn
+        FROM job_logs
+    ) ranked
+    WHERE rn <= 5
+);
