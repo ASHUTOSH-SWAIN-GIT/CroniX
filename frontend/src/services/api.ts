@@ -142,19 +142,11 @@ class ApiClient {
   }
 
   async getJobLogs(id: string): Promise<JobLog[]> {
-    // Check cache first
-    const cached = cache.get<JobLog[]>(CACHE_TYPES.JOB_LOGS, id);
-    if (cached) {
-      return cached;
-    }
-
-    // Fetch from API - always returns the 5 most recent logs
-    const result = await this.request<JobLog[]>(`/jobs/${id}/logs`);
-    
-    // Cache the result
-    cache.set(CACHE_TYPES.JOB_LOGS, result, id);
-    
-    return result;
+    // Do not cache job logs; always fetch fresh 5 most recent logs
+    const cacheBuster = Date.now();
+    return this.request<JobLog[]>(`/jobs/${id}/logs?_=${cacheBuster}`, {
+      cache: 'no-store',
+    });
   }
 
   // Test job endpoint server-side to avoid CORS
