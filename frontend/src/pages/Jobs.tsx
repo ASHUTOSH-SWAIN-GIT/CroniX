@@ -94,19 +94,6 @@ const IconGlobe = ({ className = "w-4 h-4" }: { className?: string }) => (
   </svg>
 );
 
-const IconSearch = ({ className = "w-4 h-4" }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-  >
-    <circle cx="11" cy="11" r="8" />
-    <path d="M21 21l-4.35-4.35" />
-  </svg>
-);
-
 const IconX = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg
     className={className}
@@ -178,7 +165,6 @@ export default function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     job: Job | null;
@@ -235,13 +221,7 @@ export default function Jobs() {
     }
   };
 
-  const filteredJobs = jobs.filter((job) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      job.name.toLowerCase().includes(searchLower) ||
-      job.endpoint.toLowerCase().includes(searchLower)
-    );
-  });
+  const filteredJobs = jobs;
 
   if (loading) {
     return (
@@ -307,20 +287,6 @@ export default function Jobs() {
             </button>
           </div>
 
-          {/* Search */}
-          <div className="mb-6">
-            <div className="relative w-full max-w-md">
-              <IconSearch className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="Search jobs..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:border-neutral-600 transition-colors"
-              />
-            </div>
-          </div>
-
           {/* Jobs List */}
           {filteredJobs.length === 0 ? (
             <div className="text-center py-16">
@@ -328,22 +294,18 @@ export default function Jobs() {
                 <IconClock className="w-6 h-6 text-neutral-400" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">
-                {searchTerm ? "No jobs found" : "No jobs yet"}
+                No jobs yet
               </h3>
               <p className="text-neutral-400 mb-6">
-                {searchTerm
-                  ? "Try adjusting your search terms"
-                  : "Create your first cron job to get started"}
+                Create your first cron job to get started
               </p>
-              {!searchTerm && (
-                <button
-                  onClick={() => navigate("/dashboard/jobs/create")}
-                  className="inline-flex items-center space-x-2 bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-neutral-200 transition-colors"
-                >
-                  <IconPlus className="w-4 h-4" />
-                  <span>Create Job</span>
-                </button>
-              )}
+              <button
+                onClick={() => navigate("/dashboard/jobs/create")}
+                className="inline-flex items-center space-x-2 bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-neutral-200 transition-colors"
+              >
+                <IconPlus className="w-4 h-4" />
+                <span>Create Job</span>
+              </button>
             </div>
           ) : (
             <div className="space-y-3">

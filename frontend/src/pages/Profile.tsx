@@ -141,15 +141,6 @@ export default function Profile() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-400 mb-1">
-                      User ID
-                    </label>
-                    <p className="text-white font-mono text-sm bg-neutral-800 px-3 py-2 rounded-lg">
-                      {profile.id}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-400 mb-1">
                       Email Address
                     </label>
                     <p className="text-white">{profile.email}</p>

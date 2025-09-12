@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -92,17 +93,33 @@ func main() {
 
 	r := gin.Default()
 
-	// Configure CORS
-	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:5173", "http://localhost:3000"}
-	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
-	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"}
-	config.AllowCredentials = true
-	r.Use(cors.New(config))
+	// Configure CORS (supports comma-separated ALLOWED_ORIGINS env and FRONTEND_URL)
+	corsCfg := cors.DefaultConfig()
+	allowedOrigins := []string{"http://localhost:5173", "http://localhost:3000"}
+	if envOrigins := os.Getenv("ALLOWED_ORIGINS"); envOrigins != "" {
+		for _, origin := range strings.Split(envOrigins, ",") {
+			if trimmed := strings.TrimSpace(origin); trimmed != "" {
+				allowedOrigins = append(allowedOrigins, trimmed)
+			}
+		}
+	}
+	if fe := os.Getenv("FRONTEND_URL"); fe != "" {
+		allowedOrigins = append(allowedOrigins, fe)
+	}
+	corsCfg.AllowOrigins = allowedOrigins
+	corsCfg.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	corsCfg.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"}
+	corsCfg.AllowCredentials = true
+	r.Use(cors.New(corsCfg))
 
 	r.GET("/auth/google", authHandler.Login)
 	r.GET("/auth/google/callback", authHandler.Callback)
 	r.POST("/auth/logout", authHandler.Logout)
+
+	// Health/readiness
+	r.GET("/healthz", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 
 	// Test routes (no auth required for testing)
 	r.GET("/test", func(c *gin.Context) {

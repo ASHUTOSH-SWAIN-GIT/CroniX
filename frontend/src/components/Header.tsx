@@ -20,16 +20,13 @@ const Header = () => {
     <header className="bg-black border-b border-neutral-800 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-black font-bold text-sm">C</span>
-            </div>
+          {/* Cronix Text */}
+          <div className="flex-shrink-0">
             <span className="text-xl font-bold text-white">Cronix</span>
-          </Link>
+          </div>
 
-          {/* Navigation Links */}
-          <nav className="flex items-center space-x-8">
+          {/* Navigation Links - Centered */}
+          <nav className="flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
@@ -44,6 +41,9 @@ const Header = () => {
               </Link>
             ))}
           </nav>
+
+          {/* Empty space for balance */}
+          <div className="flex-shrink-0 w-16"></div>
         </div>
       </div>
     </header>

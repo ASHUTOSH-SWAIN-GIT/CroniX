@@ -86,22 +86,22 @@ const SCHEDULE_PRESETS = [
     options: [
       {
         label: "Every minute",
-        value: "* * * * *",
+        value: "0 * * * * *",
         description: "Runs every minute",
       },
       {
         label: "Every 5 minutes",
-        value: "*/5 * * * *",
+        value: "0 */5 * * * *",
         description: "Runs every 5 minutes",
       },
       {
         label: "Every 15 minutes",
-        value: "*/15 * * * *",
+        value: "0 */15 * * * *",
         description: "Runs every 15 minutes",
       },
       {
         label: "Every 30 minutes",
-        value: "*/30 * * * *",
+        value: "0 */30 * * * *",
         description: "Runs every 30 minutes",
       },
     ],
@@ -111,22 +111,22 @@ const SCHEDULE_PRESETS = [
     options: [
       {
         label: "Every hour",
-        value: "0 * * * *",
+        value: "0 0 * * * *",
         description: "Runs at the top of every hour",
       },
       {
         label: "Every 2 hours",
-        value: "0 */2 * * *",
+        value: "0 0 */2 * * *",
         description: "Runs every 2 hours",
       },
       {
         label: "Every 6 hours",
-        value: "0 */6 * * *",
+        value: "0 0 */6 * * *",
         description: "Runs every 6 hours",
       },
       {
         label: "Every 12 hours",
-        value: "0 */12 * * *",
+        value: "0 0 */12 * * *",
         description: "Runs every 12 hours",
       },
     ],
@@ -136,22 +136,22 @@ const SCHEDULE_PRESETS = [
     options: [
       {
         label: "Daily at midnight",
-        value: "0 0 * * *",
+        value: "0 0 0 * * *",
         description: "Runs every day at 12:00 AM",
       },
       {
         label: "Daily at 6 AM",
-        value: "0 6 * * *",
+        value: "0 0 6 * * *",
         description: "Runs every day at 6:00 AM",
       },
       {
         label: "Daily at noon",
-        value: "0 12 * * *",
+        value: "0 0 12 * * *",
         description: "Runs every day at 12:00 PM",
       },
       {
         label: "Daily at 6 PM",
-        value: "0 18 * * *",
+        value: "0 0 18 * * *",
         description: "Runs every day at 6:00 PM",
       },
     ],
@@ -161,22 +161,22 @@ const SCHEDULE_PRESETS = [
     options: [
       {
         label: "Every Monday at 9 AM",
-        value: "0 9 * * 1",
+        value: "0 0 9 * * 1",
         description: "Runs every Monday at 9:00 AM",
       },
       {
         label: "Every Friday at 5 PM",
-        value: "0 17 * * 5",
+        value: "0 0 17 * * 5",
         description: "Runs every Friday at 5:00 PM",
       },
       {
         label: "Weekdays at 9 AM",
-        value: "0 9 * * 1-5",
+        value: "0 0 9 * * 1-5",
         description: "Runs Monday to Friday at 9:00 AM",
       },
       {
         label: "Weekends at 10 AM",
-        value: "0 10 * * 0,6",
+        value: "0 0 10 * * 0,6",
         description: "Runs Saturday and Sunday at 10:00 AM",
       },
     ],
@@ -186,17 +186,17 @@ const SCHEDULE_PRESETS = [
     options: [
       {
         label: "1st of every month",
-        value: "0 0 1 * *",
+        value: "0 0 0 1 * *",
         description: "Runs on the 1st of every month at midnight",
       },
       {
         label: "15th of every month",
-        value: "0 0 15 * *",
+        value: "0 0 0 15 * *",
         description: "Runs on the 15th of every month at midnight",
       },
       {
         label: "Last day of month",
-        value: "0 0 L * *",
+        value: "0 0 0 L * *",
         description: "Runs on the last day of every month",
       },
     ],
@@ -251,7 +251,7 @@ export default function CreateJob() {
   // Schedule configuration state
   const [scheduleMode, setScheduleMode] = useState<
     "preset" | "custom" | "advanced"
-  >("preset");
+  >("custom");
   const [selectedPreset, setSelectedPreset] = useState<string>("");
   const [customFrequency, setCustomFrequency] = useState<string>("hours");
   const [customInterval, setCustomInterval] = useState<number>(1);
@@ -432,18 +432,18 @@ export default function CreateJob() {
 
     switch (customFrequency) {
       case "minutes":
-        return `*/${customInterval} * * * *`;
+        return `0 */${customInterval} * * * *`;
       case "hours":
-        return `${minutes} */${customInterval} * * *`;
+        return `0 ${minutes} */${customInterval} * * *`;
       case "days":
-        return `${minutes} ${hours} */${customInterval} * *`;
+        return `0 ${minutes} ${hours} */${customInterval} * *`;
       case "weeks":
-        if (customDays.length === 0) return `${minutes} ${hours} * * 0`; // Default to Sunday
-        return `${minutes} ${hours} * * ${customDays.join(",")}`;
+        if (customDays.length === 0) return `0 ${minutes} ${hours} * * 0`; // Default to Sunday
+        return `0 ${minutes} ${hours} * * ${customDays.join(",")}`;
       case "months":
-        return `${minutes} ${hours} 1 */${customInterval} *`;
+        return `0 ${minutes} ${hours} 1 */${customInterval} *`;
       default:
-        return "* * * * *";
+        return "0 * * * * *";
     }
   };
 
@@ -655,17 +655,6 @@ export default function CreateJob() {
                 <div className="flex space-x-2">
                   <button
                     type="button"
-                    onClick={() => setScheduleMode("preset")}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      scheduleMode === "preset"
-                        ? "bg-white text-black"
-                        : "bg-neutral-800 text-white hover:bg-neutral-700"
-                    }`}
-                  >
-                    Quick Presets
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setScheduleMode("custom")}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       scheduleMode === "custom"
@@ -674,6 +663,17 @@ export default function CreateJob() {
                     }`}
                   >
                     Custom Builder
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleMode("preset")}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      scheduleMode === "preset"
+                        ? "bg-white text-black"
+                        : "bg-neutral-800 text-white hover:bg-neutral-700"
+                    }`}
+                  >
+                    Quick Presets
                   </button>
                   <button
                     type="button"
@@ -1107,14 +1107,14 @@ export default function CreateJob() {
                   </h3>
                   <div className="space-y-2 text-neutral-400 text-sm">
                     <p>
-                      <strong className="text-white">Quick Presets:</strong>{" "}
-                      Choose from common scheduling patterns like "Every hour"
-                      or "Daily at 6 AM".
-                    </p>
-                    <p>
                       <strong className="text-white">Custom Builder:</strong>{" "}
                       Create your own schedule by selecting frequency, interval,
                       and time.
+                    </p>
+                    <p>
+                      <strong className="text-white">Quick Presets:</strong>{" "}
+                      Choose from common scheduling patterns like "Every hour"
+                      or "Daily at 6 AM".
                     </p>
                     <p>
                       <strong className="text-white">Advanced Mode:</strong> For

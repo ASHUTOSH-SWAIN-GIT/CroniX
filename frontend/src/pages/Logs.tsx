@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiClient } from "../services/api";
 import type { Job, JobLog } from "../types/api";
+import { getRefreshInterval, formatCronExpression } from "../utils/cronParser";
 
 // Icons
 const IconArrowLeft = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -346,6 +347,8 @@ export default function Logs() {
   const [selectedLog, setSelectedLog] = useState<JobLog | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [justExecuted, setJustExecuted] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(10000); // Default 10 seconds
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch job details
   useEffect(() => {
@@ -357,6 +360,10 @@ export default function Logs() {
         setError(null);
         const jobData = await apiClient.getJob(id);
         setJob(jobData);
+
+        // Calculate refresh interval based on job schedule
+        const interval = getRefreshInterval(jobData.schedule);
+        setRefreshInterval(interval);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch job");
       } finally {
@@ -383,19 +390,31 @@ export default function Logs() {
     }
   };
 
-  // Fetch logs on mount and set up auto-refresh
+  // Set up auto-refresh with dynamic interval based on job schedule
   useEffect(() => {
-    if (id) {
+    if (id && refreshInterval) {
       // Clear all cache for this job to ensure fresh data
       apiClient.clearJobCache(id);
 
       fetchLogs(); // Fetch the 5 most recent logs
-      const interval = setInterval(() => {
-        fetchLogs(); // Auto-refresh every 10 seconds
-      }, 10000);
-      return () => clearInterval(interval);
+
+      // Clear existing interval
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+
+      // Set up new interval with calculated refresh rate
+      intervalRef.current = setInterval(() => {
+        fetchLogs();
+      }, refreshInterval);
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
     }
-  }, [id]);
+  }, [id, refreshInterval]);
 
   // Auto-refresh when page loads (useful when navigating from Jobs page after Run Now)
   useEffect(() => {
@@ -544,7 +563,10 @@ export default function Logs() {
               <IconClock className="w-5 h-5 text-neutral-400" />
               <div>
                 <div className="text-sm text-neutral-400">Schedule</div>
-                <div className="text-white font-medium">{job.schedule}</div>
+                <div className="text-white font-medium">
+                  {formatCronExpression(job.schedule)}
+                </div>
+                <div className="text-xs text-neutral-500">{job.schedule}</div>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -590,7 +612,12 @@ export default function Logs() {
                   </div>
                 )}
                 <div className="text-sm text-neutral-400">
-                  Auto-refreshes every 10 seconds
+                  Auto-refreshes every{" "}
+                  {refreshInterval < 1000
+                    ? `${refreshInterval}ms`
+                    : refreshInterval < 60000
+                    ? `${Math.round(refreshInterval / 1000)}s`
+                    : `${Math.round(refreshInterval / 60000)}m`}
                 </div>
               </div>
             </div>

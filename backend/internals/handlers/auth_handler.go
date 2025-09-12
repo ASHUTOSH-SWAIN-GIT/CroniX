@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
@@ -89,15 +90,28 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 
 	// Set JWT as HTTP-only cookie
-	c.SetCookie("auth_token", jwtToken, 86400, "/", "", false, true)
+	secure := os.Getenv("ENV") == "production"
+	if secure {
+		c.SetSameSite(http.SameSiteNoneMode)
+	}
+	// SameSite=None requires Secure=true; cookie will be sent in cross-site requests
+	c.SetCookie("auth_token", jwtToken, 86400, "/", "", secure, true)
 
 	// Redirect to frontend
-	c.Redirect(http.StatusTemporaryRedirect, "http://localhost:5173/dashboard")
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
+	c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/dashboard")
 }
 
 // Logout clears the auth cookie
 func (h *AuthHandler) Logout(c *gin.Context) {
-	c.SetCookie("auth_token", "", -1, "/", "", false, true)
+	secure := os.Getenv("ENV") == "production"
+	if secure {
+		c.SetSameSite(http.SameSiteNoneMode)
+	}
+	c.SetCookie("auth_token", "", -1, "/", "", secure, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
