@@ -91,12 +91,9 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 
 	// Set JWT as HTTP-only cookie
 	secure := os.Getenv("ENV") == "production"
-	if secure {
-		c.SetSameSite(http.SameSiteNoneMode)
-	}
+	// Always set SameSite=None for cross-site cookie sharing
+	c.SetSameSite(http.SameSiteNoneMode)
 	// SameSite=None requires Secure=true; cookie will be sent in cross-site requests
-	// For cross-site cookies, we need to set the domain to the backend domain
-	// and use SameSite=None with Secure=true
 	c.SetCookie("auth_token", jwtToken, 86400, "/", "", secure, true)
 
 	// Redirect to frontend
@@ -110,9 +107,8 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 // Logout clears the auth cookie
 func (h *AuthHandler) Logout(c *gin.Context) {
 	secure := os.Getenv("ENV") == "production"
-	if secure {
-		c.SetSameSite(http.SameSiteNoneMode)
-	}
+	// Always set SameSite=None for cross-site cookie sharing
+	c.SetSameSite(http.SameSiteNoneMode)
 	// Clear the cookie with same settings as when it was set
 	c.SetCookie("auth_token", "", -1, "/", "", secure, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
