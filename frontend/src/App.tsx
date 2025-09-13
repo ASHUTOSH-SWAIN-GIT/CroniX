@@ -229,7 +229,7 @@ function App() {
               href={isAuthed ? "/dashboard" : "/auth"}
               className="rounded-xl border border-transparent px-6 py-4 text-sm font-semibold bg-white text-black shadow transition hover:bg-neutral-200"
             >
-              Get Started
+              {isAuthed ? "Dashboard" : "Get Started"}
             </a>
             <button className="rounded-xl border border-neutral-800 px-6 py-4 text-sm font-medium bg-transparent text-white transition hover:bg-neutral-900">
               Learn More

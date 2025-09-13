@@ -34,18 +34,6 @@ export default function UserBadge() {
       });
   }, []);
 
-  const handleSignOut = async () => {
-    try {
-      await apiClient.logout();
-      setUser(null);
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Sign out failed:", error);
-      // Still redirect even if API call fails
-      window.location.href = "/";
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center space-x-2">
@@ -59,41 +47,25 @@ export default function UserBadge() {
   }
 
   return (
-    <div className="flex items-center space-x-3">
-      <div className="flex items-center space-x-2">
-        {user.avatar_url ? (
-          <img
-            src={user.avatar_url}
-            alt={user.name}
-            className="w-8 h-8 rounded-full border border-neutral-600"
-          />
-        ) : (
-          <div className="w-8 h-8 bg-neutral-700 rounded-full flex items-center justify-center">
-            <span className="text-sm font-medium text-white">
-              {user.name?.charAt(0)?.toUpperCase() ||
-                user.email?.charAt(0)?.toUpperCase()}
-            </span>
-          </div>
-        )}
-        <div className="hidden sm:block">
-          <div className="text-sm font-medium text-white">
-            {user.name || user.email}
-          </div>
+    <div className="flex items-center space-x-2">
+      {user.avatar_url ? (
+        <img
+          src={user.avatar_url}
+          alt={user.name}
+          className="w-8 h-8 rounded-full border border-neutral-600"
+        />
+      ) : (
+        <div className="w-8 h-8 bg-neutral-700 rounded-full flex items-center justify-center">
+          <span className="text-sm font-medium text-white">
+            {user.name?.charAt(0)?.toUpperCase() ||
+              user.email?.charAt(0)?.toUpperCase()}
+          </span>
         </div>
-      </div>
-      <div className="flex items-center space-x-2">
-        <a
-          href="/dashboard"
-          className="px-3 py-1.5 text-sm font-medium text-white bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors"
-        >
-          Dashboard
-        </a>
-        <button
-          onClick={handleSignOut}
-          className="px-3 py-1.5 text-sm font-medium text-neutral-400 hover:text-white transition-colors"
-        >
-          Sign Out
-        </button>
+      )}
+      <div className="hidden sm:block">
+        <div className="text-sm font-medium text-white">
+          {user.name || user.email}
+        </div>
       </div>
     </div>
   );
