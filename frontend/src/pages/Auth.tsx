@@ -2,7 +2,10 @@ import { Link } from "react-router-dom";
 
 export default function Auth() {
   const handleGoogleSignIn = () => {
-    window.location.href = "/auth/google";
+    const apiBaseUrl =
+      import.meta.env.VITE_API_URL || "https://cronix-eifz.onrender.com/api";
+    const backendUrl = apiBaseUrl.replace("/api", "");
+    window.location.href = `${backendUrl}/auth/google`;
   };
 
   return (
