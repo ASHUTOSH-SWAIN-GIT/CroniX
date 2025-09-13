@@ -95,7 +95,7 @@ func main() {
 
 	// Configure CORS (supports comma-separated ALLOWED_ORIGINS env and FRONTEND_URL)
 	corsCfg := cors.DefaultConfig()
-	allowedOrigins := []string{"http://localhost:5173", "http://localhost:3000"}
+	allowedOrigins := []string{}
 	if envOrigins := os.Getenv("ALLOWED_ORIGINS"); envOrigins != "" {
 		for _, origin := range strings.Split(envOrigins, ",") {
 			if trimmed := strings.TrimSpace(origin); trimmed != "" {
