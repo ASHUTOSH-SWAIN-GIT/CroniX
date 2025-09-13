@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { CreateJobRequest, UpdateJobRequest, Job } from "../types/api.js";
+import type { CreateJobRequest, UpdateJobRequest } from "../types/api.js";
 import { apiClient } from "../services/api";
 
 // Icons
@@ -246,7 +246,9 @@ export default function CreateJob() {
     active: true,
   });
 
-  const [errors, setErrors] = useState<Partial<JobFormData>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof JobFormData, string>>
+  >({});
 
   // Schedule configuration state
   const [scheduleMode, setScheduleMode] = useState<
@@ -259,7 +261,7 @@ export default function CreateJob() {
   const [customDays, setCustomDays] = useState<string[]>([]);
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<JobFormData> = {};
+    const newErrors: Partial<Record<keyof JobFormData, string>> = {};
 
     if (!formData.name.trim()) {
       newErrors.name = "Job name is required";
@@ -483,11 +485,6 @@ export default function CreateJob() {
     }
 
     return `Custom schedule: ${cronExpression}`;
-  };
-
-  const insertScheduleExample = (schedule: string) => {
-    setFormData((prev) => ({ ...prev, schedule }));
-    setSelectedPreset(schedule);
   };
 
   const handlePresetSelect = (schedule: string) => {

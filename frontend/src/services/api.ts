@@ -1,7 +1,7 @@
 import type { Job, JobLog, CreateJobRequest, UpdateJobRequest } from '../types/api.js';
 import { cache, CACHE_TYPES } from '../utils/cache.js';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cronix-eifz.onrender.com/api';
 
 class ApiClient {
   private baseURL: string;
