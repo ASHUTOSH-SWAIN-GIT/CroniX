@@ -348,7 +348,7 @@ export default function Logs() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [justExecuted, setJustExecuted] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(10000); // Default 10 seconds
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch job details
   useEffect(() => {
