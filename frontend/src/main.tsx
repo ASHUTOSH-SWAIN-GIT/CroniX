@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
 import Auth from "./pages/Auth.tsx";
+import AuthHandler from "./components/AuthHandler.tsx";
 import DashboardLayout from "./components/DashboardLayout.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import Jobs from "./pages/Jobs.tsx";
@@ -18,7 +19,15 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/" element={<App />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<Dashboard />} />
+          <Route
+            index
+            element={
+              <>
+                <AuthHandler />
+                <Dashboard />
+              </>
+            }
+          />
           <Route path="jobs" element={<Jobs />} />
           <Route path="jobs/create" element={<CreateJob />} />
           <Route path="jobs/edit/:id" element={<CreateJob />} />

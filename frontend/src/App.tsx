@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { apiClient } from "./services/api";
+import { apiClient, getAuthToken } from "./services/api";
 
 // Monochrome inline SVG icons
 const IconClock = () => (
@@ -136,6 +136,14 @@ function App() {
   const [isAuthed, setIsAuthed] = useState(false);
   useEffect(() => {
     let mounted = true;
+
+    // Check if we have a token first
+    const token = getAuthToken();
+    if (!token) {
+      setIsAuthed(false);
+      return;
+    }
+
     apiClient
       .getProfile()
       .then(() => {

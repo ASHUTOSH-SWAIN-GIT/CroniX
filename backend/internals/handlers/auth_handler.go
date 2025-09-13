@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -89,31 +90,18 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	// Set JWT as HTTP-only cookie
-	secure := os.Getenv("ENV") == "production"
-	// Always set SameSite=None for cross-site cookie sharing
-	c.SetSameSite(http.SameSiteNoneMode)
-	// SameSite=None requires Secure=true; cookie will be sent in cross-site requests
-	// Set domain to the backend domain so it can be accessed by the backend
-	backendDomain := "cronix-eifz.onrender.com"
-	c.SetCookie("auth_token", jwtToken, 86400, "/", backendDomain, secure, true)
-
-	// Redirect to frontend
+	// Redirect to frontend with JWT token as query parameter
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		frontendURL = "http://localhost:5173"
 	}
-	c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/dashboard")
+	// Pass the JWT token as a query parameter to the frontend
+	redirectURL := fmt.Sprintf("%s/dashboard?token=%s", frontendURL, jwtToken)
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
 
-// Logout clears the auth cookie
+// Logout endpoint (frontend will handle clearing localStorage)
 func (h *AuthHandler) Logout(c *gin.Context) {
-	secure := os.Getenv("ENV") == "production"
-	// Always set SameSite=None for cross-site cookie sharing
-	c.SetSameSite(http.SameSiteNoneMode)
-	// Clear the cookie with same settings as when it was set
-	backendDomain := "cronix-eifz.onrender.com"
-	c.SetCookie("auth_token", "", -1, "/", backendDomain, secure, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 

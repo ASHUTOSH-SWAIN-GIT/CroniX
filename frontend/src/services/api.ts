@@ -3,6 +3,21 @@ import { cache, CACHE_TYPES } from '../utils/cache.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cronix-eifz.onrender.com/api';
 
+// JWT token management
+const TOKEN_KEY = 'auth_token';
+
+export const getAuthToken = (): string | null => {
+  return localStorage.getItem(TOKEN_KEY);
+};
+
+export const setAuthToken = (token: string): void => {
+  localStorage.setItem(TOKEN_KEY, token);
+};
+
+export const removeAuthToken = (): void => {
+  localStorage.removeItem(TOKEN_KEY);
+};
+
 class ApiClient {
   private baseURL: string;
 
@@ -16,12 +31,19 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    };
+
+    // Add Authorization header if token exists
+    const token = getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const config: RequestInit = {
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     };
 
@@ -189,7 +211,6 @@ class ApiClient {
     // Use direct fetch since this endpoint is outside the /api group
     const response = await fetch(`${this.baseURL.replace('/api', '')}/auth/logout`, {
       method: 'POST',
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -198,6 +219,9 @@ class ApiClient {
     if (!response.ok) {
       throw new Error(`Logout failed: ${response.status} ${response.statusText}`);
     }
+    
+    // Remove token from localStorage
+    removeAuthToken();
   }
 
   // Cache management methods
