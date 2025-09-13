@@ -94,7 +94,9 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	// Always set SameSite=None for cross-site cookie sharing
 	c.SetSameSite(http.SameSiteNoneMode)
 	// SameSite=None requires Secure=true; cookie will be sent in cross-site requests
-	c.SetCookie("auth_token", jwtToken, 86400, "/", "", secure, true)
+	// Set domain to the backend domain so it can be accessed by the backend
+	backendDomain := "cronix-eifz.onrender.com"
+	c.SetCookie("auth_token", jwtToken, 86400, "/", backendDomain, secure, true)
 
 	// Redirect to frontend
 	frontendURL := os.Getenv("FRONTEND_URL")
@@ -110,7 +112,8 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	// Always set SameSite=None for cross-site cookie sharing
 	c.SetSameSite(http.SameSiteNoneMode)
 	// Clear the cookie with same settings as when it was set
-	c.SetCookie("auth_token", "", -1, "/", "", secure, true)
+	backendDomain := "cronix-eifz.onrender.com"
+	c.SetCookie("auth_token", "", -1, "/", backendDomain, secure, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
