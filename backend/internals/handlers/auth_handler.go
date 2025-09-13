@@ -38,7 +38,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Store state in session/cookie for validation
 	c.SetCookie("oauth_state", state, 600, "/", "", false, true)
 
-	url := h.authConfig.GooglelOauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+	// Get prompt parameter from query string (e.g., prompt=select_account)
+	prompt := c.Query("prompt")
+
+	// Create auth options
+	authOptions := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}
+	if prompt != "" {
+		authOptions = append(authOptions, oauth2.SetAuthURLParam("prompt", prompt))
+	}
+
+	url := h.authConfig.GooglelOauthConfig.AuthCodeURL(state, authOptions...)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 

@@ -5,7 +5,8 @@ export default function Auth() {
     const apiBaseUrl =
       import.meta.env.VITE_API_URL || "https://cronix-eifz.onrender.com/api";
     const backendUrl = apiBaseUrl.replace("/api", "");
-    window.location.href = `${backendUrl}/auth/google`;
+    // Add prompt=select_account to force Google to show account selection
+    window.location.href = `${backendUrl}/auth/google?prompt=select_account`;
   };
 
   return (
