@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
@@ -96,14 +97,19 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 	}
 	// SameSite=None requires Secure=true; cookie will be sent in cross-site requests
 	// Set domain to allow cross-site cookie sharing
-	frontendDomain := os.Getenv("FRONTEND_URL")
-	if frontendDomain == "" {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	var frontendDomain string
+	if frontendURL == "" {
 		frontendDomain = "cronix-o2dz41qsl-ashutoshs-projects-45093912.vercel.app"
+	} else {
+		// Extract domain from URL (remove https://)
+		frontendDomain = strings.TrimPrefix(frontendURL, "https://")
+		frontendDomain = strings.TrimPrefix(frontendDomain, "http://")
 	}
 	c.SetCookie("auth_token", jwtToken, 86400, "/", frontendDomain, secure, true)
 
 	// Redirect to frontend
-	frontendURL := os.Getenv("FRONTEND_URL")
+	frontendURL = os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		frontendURL = "http://localhost:5173"
 	}
@@ -117,9 +123,14 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		c.SetSameSite(http.SameSiteNoneMode)
 	}
 	// Set domain to allow cross-site cookie sharing
-	frontendDomain := os.Getenv("FRONTEND_URL")
-	if frontendDomain == "" {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	var frontendDomain string
+	if frontendURL == "" {
 		frontendDomain = "cronix-o2dz41qsl-ashutoshs-projects-45093912.vercel.app"
+	} else {
+		// Extract domain from URL (remove https://)
+		frontendDomain = strings.TrimPrefix(frontendURL, "https://")
+		frontendDomain = strings.TrimPrefix(frontendDomain, "http://")
 	}
 	c.SetCookie("auth_token", "", -1, "/", frontendDomain, secure, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
