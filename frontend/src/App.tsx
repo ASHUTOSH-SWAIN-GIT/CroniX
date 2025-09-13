@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { apiClient, getAuthToken } from "./services/api";
+import UserBadge from "./components/UserBadge";
 
 // Monochrome inline SVG icons
 const IconClock = () => (
@@ -205,6 +206,13 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-white">
+      {/* Header with User Badge */}
+      <header className="absolute top-0 left-0 right-0 z-10 p-6">
+        <div className="max-w-6xl mx-auto flex justify-end">
+          <UserBadge />
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="flex-1 flex items-center justify-center px-8 pt-8 pb-4 min-h-[70vh] bg-black">
         <div className="text-center max-w-3xl mx-auto">
