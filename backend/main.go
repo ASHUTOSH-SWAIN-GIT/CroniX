@@ -53,22 +53,33 @@ func LoadDBconfig() (*DBConfig, error) {
 }
 
 func main() {
-	cfg, err := LoadDBconfig()
-	if err != nil {
-		panic(err)
+	if os.Getenv("GIN_MODE") != "release" {
+		if err := godotenv.Load(".env"); err != nil {
+			log.Println("NO .env file found, relying on environment variables.")
+		}
 	}
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode,
-	)
+	dsn := os.Getenv("DATABASE_URL")
+
+	if dsn == "" {
+		log.Println("DATABASE_URL not found, building from individual DB_* variables for local development.")
+		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+			os.Getenv("DB_USER"),
+			os.Getenv("DB_PASSWORD"),
+			os.Getenv("DB_HOST"),
+			os.Getenv("DB_PORT"),
+			os.Getenv("DB_NAME"),
+			os.Getenv("DB_SSLMODE"),
+		)
+	}
 
 	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("failed to connect to database: %v", err))
 	}
 	defer pool.Close()
 
-	fmt.Println("Connected to the datase successfully !!!")
+	fmt.Println("Connected to the database successfully !!!")
 
 	queries := db.New(pool)
 	authConfig := config.LoadAuthConfig()
