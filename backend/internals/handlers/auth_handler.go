@@ -95,7 +95,12 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		c.SetSameSite(http.SameSiteNoneMode)
 	}
 	// SameSite=None requires Secure=true; cookie will be sent in cross-site requests
-	c.SetCookie("auth_token", jwtToken, 86400, "/", "", secure, true)
+	// Set domain to allow cross-site cookie sharing
+	frontendDomain := os.Getenv("FRONTEND_URL")
+	if frontendDomain == "" {
+		frontendDomain = "cronix-o2dz41qsl-ashutoshs-projects-45093912.vercel.app"
+	}
+	c.SetCookie("auth_token", jwtToken, 86400, "/", frontendDomain, secure, true)
 
 	// Redirect to frontend
 	frontendURL := os.Getenv("FRONTEND_URL")
@@ -111,7 +116,12 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	if secure {
 		c.SetSameSite(http.SameSiteNoneMode)
 	}
-	c.SetCookie("auth_token", "", -1, "/", "", secure, true)
+	// Set domain to allow cross-site cookie sharing
+	frontendDomain := os.Getenv("FRONTEND_URL")
+	if frontendDomain == "" {
+		frontendDomain = "cronix-o2dz41qsl-ashutoshs-projects-45093912.vercel.app"
+	}
+	c.SetCookie("auth_token", "", -1, "/", frontendDomain, secure, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
