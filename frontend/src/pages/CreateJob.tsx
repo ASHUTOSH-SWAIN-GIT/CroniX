@@ -4,6 +4,29 @@ import type { CreateJobRequest, UpdateJobRequest } from "../types/api.js";
 import { apiClient } from "../services/api";
 import { useToast } from "../contexts/ToastContext";
 
+// Helper function to parse headers from database
+const parseHeadersFromDB = (headers: string | null | undefined): string => {
+  if (!headers || headers === "null" || headers === "bnVsbA==") {
+    return "";
+  }
+
+  try {
+    const headersObj = JSON.parse(headers);
+    if (headersObj && typeof headersObj === "object") {
+      return Object.entries(headersObj)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join("\n");
+    }
+  } catch (e) {
+    // If parsing fails, only use the string if it's not "null" or base64 encoded null
+    if (headers !== "null" && headers !== "bnVsbA==") {
+      return headers;
+    }
+  }
+
+  return "";
+};
+
 // Icons
 const IconArrowLeft = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg
@@ -303,18 +326,8 @@ export default function CreateJob() {
           setInitialLoading(true);
           const job = await apiClient.getJob(id);
 
-          // Parse headers from JSON string
-          let headersString = "";
-          if (job.headers) {
-            try {
-              const headersObj = JSON.parse(job.headers);
-              headersString = Object.entries(headersObj)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join("\n");
-            } catch (e) {
-              headersString = job.headers;
-            }
-          }
+          // Parse headers from JSON string using helper function
+          const headersString = parseHeadersFromDB(job.headers);
 
           setFormData({
             name: job.name,
