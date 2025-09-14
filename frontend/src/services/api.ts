@@ -52,13 +52,28 @@ class ApiClient {
       
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorDetails = '';
+        let errorType = 'api_error';
+        
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
+          errorDetails = errorData.details || errorData.message || '';
+          errorType = errorData.error === 'Endpoint test failed' ? 'endpoint_validation' : 'api_error';
         } catch {
           // If response is not JSON, use the default error message
         }
-        throw new Error(errorMessage);
+        
+        const error = new Error(errorMessage) as Error & {
+          details?: string;
+          type?: string;
+          status?: number;
+        };
+        error.details = errorDetails;
+        error.type = errorType;
+        error.status = response.status;
+        
+        throw error;
       }
 
       if (response.status === 204) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { CreateJobRequest, UpdateJobRequest } from "../types/api.js";
 import { apiClient } from "../services/api";
+import { useToast } from "../contexts/ToastContext";
 
 // Icons
 const IconArrowLeft = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -225,6 +226,7 @@ export default function CreateJob() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
+  const { showSuccess, showError, showWarning } = useToast();
 
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(isEditMode);
@@ -339,6 +341,10 @@ export default function CreateJob() {
           }
         } catch (error) {
           console.error("Failed to load job:", error);
+          showError(
+            "Failed to Load Job",
+            error instanceof Error ? error.message : "Could not load job data"
+          );
           navigate("/dashboard/jobs");
         } finally {
           setInitialLoading(false);
@@ -384,6 +390,7 @@ export default function CreateJob() {
         };
 
         await apiClient.updateJob(id, updateData);
+        showSuccess("Job Updated", "Your job has been updated successfully!");
       } else {
         // Create new job
         const jobData: CreateJobRequest = {
@@ -397,6 +404,7 @@ export default function CreateJob() {
         };
 
         await apiClient.createJob(jobData);
+        showSuccess("Job Created", "Your job has been created successfully!");
       }
 
       // Redirect back to jobs page
@@ -406,12 +414,69 @@ export default function CreateJob() {
         `Failed to ${isEditMode ? "update" : "create"} job:`,
         error
       );
-      setErrors({
-        name:
+
+      // Check if it's an endpoint validation error
+      if (
+        error instanceof Error &&
+        "type" in error &&
+        error.type === "endpoint_validation"
+      ) {
+        const errorWithDetails = error as Error & { details?: string };
+        const errorMessage = errorWithDetails.details || error.message;
+
+        // Determine the specific type of error and show appropriate message
+        if (errorMessage.includes("invalid HTTP method")) {
+          showError("Invalid HTTP Method", errorMessage);
+          setErrors({
+            method: "Please select a valid HTTP method",
+          });
+        } else if (
+          errorMessage.includes("invalid endpoint URL format") ||
+          errorMessage.includes("endpoint host not found") ||
+          errorMessage.includes("connection refused")
+        ) {
+          showError("Invalid Endpoint", errorMessage);
+          setErrors({
+            endpoint: "Please check your endpoint URL",
+          });
+        } else if (errorMessage.includes("Method Not Allowed")) {
+          showError("Method Not Supported", errorMessage);
+          setErrors({
+            method: "This endpoint doesn't support the selected HTTP method",
+          });
+        } else if (
+          errorMessage.includes("Unauthorized") ||
+          errorMessage.includes("Forbidden")
+        ) {
+          showError("Authentication Required", errorMessage);
+          setErrors({
+            headers: "Please check your authentication headers",
+          });
+        } else if (errorMessage.includes("Bad Request")) {
+          showError("Invalid Request", errorMessage);
+          setErrors({
+            body: "Please check your request body format",
+          });
+        } else {
+          showError("Endpoint Validation Failed", errorMessage);
+          setErrors({
+            endpoint: errorMessage,
+          });
+        }
+      } else {
+        showError(
+          `Failed to ${isEditMode ? "Update" : "Create"} Job`,
           error instanceof Error
             ? error.message
-            : `Failed to ${isEditMode ? "update" : "create"} job`,
-      });
+            : `Failed to ${isEditMode ? "update" : "create"} job`
+        );
+        setErrors({
+          name:
+            error instanceof Error
+              ? error.message
+              : `Failed to ${isEditMode ? "update" : "create"} job`,
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -506,6 +571,7 @@ export default function CreateJob() {
 
   const testEndpoint = async () => {
     if (!formData.endpoint.trim()) {
+      showWarning("Missing Endpoint", "Please enter an endpoint URL first");
       setTestResult({
         success: false,
         message: "Please enter an endpoint URL first",
@@ -523,6 +589,7 @@ export default function CreateJob() {
         try {
           headers = JSON.parse(formData.headers);
         } catch {
+          showError("Invalid Headers", "Invalid JSON format for headers");
           setTestResult({
             success: false,
             message: "Invalid JSON format for headers",
@@ -540,8 +607,22 @@ export default function CreateJob() {
         body: formData.body.trim() || undefined,
       });
 
+      const isSuccess = result.status >= 200 && result.status < 300;
+
+      if (isSuccess) {
+        showSuccess(
+          "Endpoint Test Successful",
+          `Request completed with status ${result.status} ${result.status_text}`
+        );
+      } else {
+        showError(
+          "Endpoint Test Failed",
+          `Request failed with status ${result.status} ${result.status_text}`
+        );
+      }
+
       setTestResult({
-        success: result.status >= 200 && result.status < 300,
+        success: isSuccess,
         message: `Request completed with status ${result.status} ${result.status_text}`,
         data: {
           status: result.status,
@@ -551,9 +632,34 @@ export default function CreateJob() {
         },
       });
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Request failed";
+
+      // Show specific error messages for different types of failures
+      if (errorMessage.includes("invalid HTTP method")) {
+        showError("Invalid HTTP Method", errorMessage);
+      } else if (
+        errorMessage.includes("invalid endpoint URL format") ||
+        errorMessage.includes("endpoint host not found") ||
+        errorMessage.includes("connection refused")
+      ) {
+        showError("Invalid Endpoint", errorMessage);
+      } else if (errorMessage.includes("Method Not Allowed")) {
+        showError("Method Not Supported", errorMessage);
+      } else if (
+        errorMessage.includes("Unauthorized") ||
+        errorMessage.includes("Forbidden")
+      ) {
+        showError("Authentication Required", errorMessage);
+      } else if (errorMessage.includes("Bad Request")) {
+        showError("Invalid Request", errorMessage);
+      } else {
+        showError("Endpoint Test Failed", errorMessage);
+      }
+
       setTestResult({
         success: false,
-        message: error instanceof Error ? error.message : "Request failed",
+        message: errorMessage,
       });
     } finally {
       setTesting(false);
