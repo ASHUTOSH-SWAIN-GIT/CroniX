@@ -201,7 +201,9 @@ const LogDetailDialog = ({
                     log.response_code
                   )}`}
                 >
-                  {log.response_code ? `HTTP ${log.response_code}` : "N/A"}
+                  {log.response_code
+                    ? `HTTP ${Number(log.response_code)}`
+                    : "N/A"}
                 </div>
               </div>
               <div className="bg-neutral-800/50 rounded-lg p-4">
@@ -657,7 +659,7 @@ export default function Logs() {
                               log.response_code
                             )}`}
                           >
-                            HTTP {log.response_code}
+                            HTTP {Number(log.response_code)}
                           </span>
                         )}
                         {log.duration_ms && (

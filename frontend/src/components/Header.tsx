@@ -22,7 +22,12 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Cronix Text */}
           <div className="flex-shrink-0">
-            <span className="text-xl font-bold text-white">Cronix</span>
+            <Link
+              to="/"
+              className="text-xl font-bold text-white hover:text-neutral-300 transition-colors duration-200"
+            >
+              Cronix
+            </Link>
           </div>
 
           {/* Navigation Links - Centered */}

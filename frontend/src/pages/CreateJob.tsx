@@ -745,10 +745,18 @@ export default function CreateJob() {
                     onChange={(e) =>
                       handleInputChange("method", e.target.value)
                     }
-                    className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-neutral-600"
+                    className={`w-full px-4 py-3 bg-neutral-800 border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 ${
+                      errors.method
+                        ? "border-red-500"
+                        : "border-neutral-700 hover:border-neutral-600"
+                    }`}
                   >
                     {HTTP_METHODS.map((method) => (
-                      <option key={method} value={method}>
+                      <option
+                        key={method}
+                        value={method}
+                        className="bg-neutral-800 text-white"
+                      >
                         {method}
                       </option>
                     ))}
@@ -857,7 +865,7 @@ export default function CreateJob() {
                           setCustomInterval(1);
                           setCustomDays([]);
                         }}
-                        className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-neutral-600"
+                        className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 hover:border-neutral-600 transition-all duration-200"
                       >
                         {CUSTOM_SCHEDULE_OPTIONS.frequency.map((freq) => (
                           <option key={freq.value} value={freq.value}>
@@ -876,7 +884,7 @@ export default function CreateJob() {
                         onChange={(e) =>
                           setCustomInterval(Number(e.target.value))
                         }
-                        className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-neutral-600"
+                        className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 hover:border-neutral-600 transition-all duration-200"
                       >
                         {CUSTOM_SCHEDULE_OPTIONS.intervals[
                           customFrequency as keyof typeof CUSTOM_SCHEDULE_OPTIONS.intervals

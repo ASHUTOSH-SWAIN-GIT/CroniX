@@ -179,7 +179,7 @@ export default function Profile() {
                     <button
                       onClick={handleSignOut}
                       disabled={signingOut}
-                      className="bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
+                      className="bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-700/50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
                     >
                       {signingOut ? (
                         <>
