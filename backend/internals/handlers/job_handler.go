@@ -44,6 +44,16 @@ func (h *JobsHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Test endpoint before creating the job
+	if err := h.js.TestEndpoint(c.Request.Context(), req.Endpoint, req.Method, req.Headers, req.Body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Endpoint test failed",
+			"details": err.Error(),
+			"message": "Please check your endpoint URL, method, headers, and body. Make sure the endpoint is accessible and returns a successful response (2xx status code).",
+		})
+		return
+	}
+
 	job, err := h.js.Create(c.Request.Context(), uid, req.Name, req.Schedule, req.Endpoint, req.Method, req.Headers, req.Body, req.Active)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -97,9 +107,62 @@ func (h *JobsHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// If endpoint, method, headers, or body are being updated, test the endpoint first
+	endpoint := getStrPtr(req["endpoint"])
+	method := getStrPtr(req["method"])
+	headers := getHeadersPtr(req["headers"])
+	body := getStrPtr(req["body"])
+
+	// If any of these fields are being updated, we need to test the endpoint
+	if endpoint != nil || method != nil || headers != nil || body != nil {
+		// Get current job to fill in missing fields
+		currentJob, err := h.js.Get(c.Request.Context(), id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+			return
+		}
+
+		// Use updated values or fall back to current values
+		testEndpoint := currentJob.Endpoint
+		if endpoint != nil {
+			testEndpoint = *endpoint
+		}
+
+		testMethod := currentJob.Method
+		if method != nil {
+			testMethod = *method
+		}
+
+		testHeaders := make(map[string]string)
+		if len(currentJob.Headers) > 0 {
+			json.Unmarshal(currentJob.Headers, &testHeaders)
+		}
+		if headers != nil {
+			testHeaders = *headers
+		}
+
+		testBody := &currentJob.Body.String
+		if !currentJob.Body.Valid {
+			testBody = nil
+		}
+		if body != nil {
+			testBody = body
+		}
+
+		// Test the endpoint
+		if err := h.js.TestEndpoint(c.Request.Context(), testEndpoint, testMethod, testHeaders, testBody); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Endpoint test failed",
+				"details": err.Error(),
+				"message": "Please check your endpoint URL, method, headers, and body. Make sure the endpoint is accessible and returns a successful response (2xx status code).",
+			})
+			return
+		}
+	}
+
 	job, err := h.js.Update(c.Request.Context(), id,
-		getStrPtr(req["name"]), getStrPtr(req["schedule"]), getStrPtr(req["endpoint"]), getStrPtr(req["method"]),
-		getHeadersPtr(req["headers"]), getStrPtr(req["body"]), getBoolPtr(req["active"]),
+		getStrPtr(req["name"]), getStrPtr(req["schedule"]), endpoint, method,
+		headers, body, getBoolPtr(req["active"]),
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

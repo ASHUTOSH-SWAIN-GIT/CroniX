@@ -104,6 +104,9 @@ func main() {
 
 	r := gin.Default()
 
+	// Setup test routes for endpoint validation testing
+	SetupTestRoutes(r)
+
 	// Configure CORS (supports comma-separated ALLOWED_ORIGINS env and FRONTEND_URL)
 	corsCfg := cors.DefaultConfig()
 	allowedOrigins := []string{}
@@ -117,6 +120,12 @@ func main() {
 	if fe := os.Getenv("FRONTEND_URL"); fe != "" {
 		allowedOrigins = append(allowedOrigins, fe)
 	}
+
+	// Ensure we have at least one valid origin
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = []string{"http://localhost:5173"}
+	}
+
 	corsCfg.AllowOrigins = allowedOrigins
 	corsCfg.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	corsCfg.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"}

@@ -29,6 +29,11 @@ func NewAuthHandler(authService *services.AuthService, authConfig *config.AuthCo
 
 // Login initiates Google OAuth flow
 func (h *AuthHandler) Login(c *gin.Context) {
+	// Debug: Check OAuth config
+	fmt.Printf("OAuth Config - ClientID: %s, RedirectURL: %s\n",
+		h.authConfig.GooglelOauthConfig.ClientID,
+		h.authConfig.GooglelOauthConfig.RedirectURL)
+
 	state, err := services.GenerateState()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate state"})
@@ -48,6 +53,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	url := h.authConfig.GooglelOauthConfig.AuthCodeURL(state, authOptions...)
+	fmt.Printf("Generated OAuth URL: %s\n", url)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -65,9 +71,19 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 
 	// Exchange code for token
 	code := c.Query("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization code is missing"})
+		return
+	}
+
 	token, err := h.authConfig.GooglelOauthConfig.Exchange(ctx, code)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to exchange token"})
+		// Log the detailed error for debugging
+		fmt.Printf("Token exchange error: %v\n", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Failed to exchange token",
+			"details": err.Error(),
+		})
 		return
 	}
 
