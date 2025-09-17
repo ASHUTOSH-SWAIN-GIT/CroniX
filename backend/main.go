@@ -141,6 +141,11 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	// Lightweight ping endpoint for uptime checks
+	r.GET("/ping", func(c *gin.Context) {
+		c.String(200, "pong")
+	})
+
 	// Test routes (no auth required for testing)
 	r.GET("/test", func(c *gin.Context) {
 		c.JSON(200, gin.H{
